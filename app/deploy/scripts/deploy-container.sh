@@ -34,7 +34,12 @@ fi
 
 chown -R "${DEPLOY_USER}:${DEPLOY_USER}" "${APP_DIR}"
 
-if [[ ! -d "${APP_DIR}/repo/.git" ]]; then
+if [[ "${DEPLOY_SKIP_GIT:-0}" == "1" ]]; then
+  if [[ ! -d "${APP_DIR}/repo/app" ]]; then
+    echo "DEPLOY_SKIP_GIT=1 requires ${APP_DIR}/repo/app to exist." >&2
+    exit 1
+  fi
+elif [[ ! -d "${APP_DIR}/repo/.git" ]]; then
   sudo -u "${DEPLOY_USER}" git clone --branch "${BRANCH}" "${REPO_URL}" "${APP_DIR}/repo"
 else
   sudo -u "${DEPLOY_USER}" git -C "${APP_DIR}/repo" fetch origin "${BRANCH}"
