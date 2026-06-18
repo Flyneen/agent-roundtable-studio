@@ -58,6 +58,16 @@ npm run build
 npm run validate:openspec
 ```
 
+真实公网 UI 流程验收：
+
+```powershell
+npm install --no-save playwright
+npx playwright install chromium
+$env:BASE_URL="http://113.44.223.11:8181/agent-roundtable-studio"; npm run test:ui
+```
+
+该脚本会像普通用户一样在 Web 页面输入问题、让系统自动组建圆桌、启动结构化圆桌、查看输出中心报告，并在 `frontend/test-output/` 生成流程截图。
+
 ## 环境变量
 
 复制 `.env.example` 为部署环境变量参考，不要把真实密钥写入仓库。

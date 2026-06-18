@@ -8,6 +8,7 @@
     "start:frontend": "node frontend/server.mjs",
     "build": "node frontend/scripts/build.mjs",
     "test": "npm run build && node backend/test/smoke.mjs && node backend/test/openai-compatible-smoke.mjs",
+    "test:ui": "node frontend/test/ui-flow.mjs",
     "validate:openspec": "openspec validate web-mvp-frontend-backend --strict --no-interactive"
   },
   "engines": {

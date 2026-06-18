@@ -3,6 +3,7 @@ backend/data
 backend/data-test
 backend/data-openai-compatible-test
 frontend/dist
+frontend/test-output
 data
 logs
 .env
