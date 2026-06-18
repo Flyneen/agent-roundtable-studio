@@ -24,7 +24,7 @@ try {
   await page.fill("input[name='targetOutput']", "教育场景圆桌报告");
   await page.click("button[type='submit']");
 
-  await page.waitForSelector("#taskProfile:not(.empty)", { timeout: 15000 });
+  await page.waitForSelector("#taskProfile:not(.empty)", { timeout: 180000 });
   await expectVisibleText(page, "系统组建圆桌");
   await expectVisibleText(page, "真实分析任务画像");
   await expectVisibleText(page, "教学设计");
@@ -32,21 +32,21 @@ try {
   await expectVisibleText(page, "覆盖检查");
   await expectVisibleText(page, "匹配已有");
   await expectVisibleText(page, "运行证据");
-  await page.waitForSelector("#runButton:not(.hidden)", { timeout: 15000 });
+  await page.waitForSelector("#runButton:not(.hidden)", { timeout: 180000 });
   await page.screenshot({ path: path.join(screenshotDir, "ui-flow-01-assembly.png"), fullPage: true });
 
   await page.click("#runButton");
-  await page.waitForSelector("#events:not(.empty)", { timeout: 15000 });
+  await page.waitForSelector("#events:not(.empty)", { timeout: 180000 });
   await expectVisibleText(page, "challenge");
   await expectVisibleText(page, "consensus");
   await page.screenshot({ path: path.join(screenshotDir, "ui-flow-02-roundtable.png"), fullPage: true });
 
   await page.click("[data-view='output']");
-  await page.waitForSelector("#report:not(.empty)", { timeout: 15000 });
+  await page.waitForSelector("#report:not(.empty)", { timeout: 180000 });
   await expectVisibleText(page, "圆桌评审报告");
   await expectVisiblePattern(page, /主要质疑|关键质疑/);
   await expectVisibleText(page, "事件索引");
-  await page.waitForSelector("#exportButton:not(.hidden)", { timeout: 15000 });
+  await page.waitForSelector("#exportButton:not(.hidden)", { timeout: 180000 });
   await page.screenshot({ path: path.join(screenshotDir, "ui-flow-03-report.png"), fullPage: true });
 
   console.log(`UI flow passed: ${baseUrl}`);

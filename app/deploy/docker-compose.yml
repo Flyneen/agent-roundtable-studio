@@ -36,7 +36,7 @@ services:
       APP_BASE_PATH: /agent-roundtable-studio
       STATIC_ROOT: /app/frontend/dist
       AI_ORCHESTRATOR_URL: http://ai-orchestrator-python:8790
-      AI_ORCHESTRATOR_TIMEOUT_MS: 90000
+      AI_ORCHESTRATOR_TIMEOUT_MS: ${AI_ORCHESTRATOR_TIMEOUT_MS:-180000}
     networks:
       - gateway-net
     expose:
