@@ -79,6 +79,16 @@ OPENAI_API_KEY=<只写在服务器环境或 secret 中>
 OPENAI_MODEL=<第三方模型名称>
 ```
 
+阿里云百炼 DashScope 兼容 OpenAI 的北京地域示例：
+
+```text
+AI_RUNTIME=openai
+OPENAI_BASE_URL=https://dashscope.aliyuncs.com/compatible-mode/v1
+OPENAI_API_MODE=chat_completions
+OPENAI_API_KEY=<只写在服务器环境或 secret 中>
+OPENAI_MODEL=qwen-plus
+```
+
 不要把真实 Key 写入仓库、前端或文档。已经暴露过的 Key 必须在供应商侧作废后重新生成。
 
 ## 5. Docker Compose
@@ -169,6 +179,7 @@ BASE_URL=http://113.44.223.11:8181/agent-roundtable-studio bash deploy/scripts/r
 - `docker ps` 中存在 `agent-roundtable-studio`，状态为 running。
 - `docker exec agent-roundtable-studio node --input-type=module -e "const r = await fetch('http://127.0.0.1:8787/health'); if (!r.ok) process.exit(1);"` 通过。
 - `docker exec gateway-nginx-8181 nginx -t` 通过。
+- `docker exec gateway-nginx-8181 nginx -T 2>/dev/null | grep 'agent-roundtable-studio:8787'` 能看到 `/agent-roundtable-studio` 实际转发到应用容器。
 - `BASE_URL=http://113.44.223.11:8181/agent-roundtable-studio bash deploy/scripts/remote-smoke.sh` 通过。
 - `http://113.44.223.11:8181/` 原有服务仍可访问，不能被本应用覆盖。
 

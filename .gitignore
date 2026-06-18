@@ -19,6 +19,7 @@ secret/
 # Runtime data
 app/backend/data/
 app/backend/data-test/
+app/backend/data-openai-compatible-test/
 app/data/
 data/
 logs/

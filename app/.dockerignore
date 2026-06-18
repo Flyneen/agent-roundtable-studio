@@ -1,6 +1,7 @@
 node_modules
 backend/data
 backend/data-test
+backend/data-openai-compatible-test
 frontend/dist
 data
 logs
