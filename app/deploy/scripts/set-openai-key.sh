@@ -27,8 +27,27 @@ require_root() {
 set_env_value() {
   local key="$1"
   local value="$2"
+  local tmp
+  tmp="$(mktemp)"
   if grep -q "^${key}=" "${ENV_FILE}"; then
-    sed -i "s#^${key}=.*#${key}=${value}#" "${ENV_FILE}"
+    awk -v key="${key}" -v value="${value}" '
+      BEGIN { replaced = 0 }
+      index($0, key "=") == 1 {
+        if (!replaced) {
+          print key "=" value
+          replaced = 1
+        }
+        next
+      }
+      { print }
+      END {
+        if (!replaced) {
+          print key "=" value
+        }
+      }
+    ' "${ENV_FILE}" > "${tmp}"
+    cat "${tmp}" > "${ENV_FILE}"
+    rm -f "${tmp}"
   else
     printf '%s=%s\n' "${key}" "${value}" >> "${ENV_FILE}"
   fi
