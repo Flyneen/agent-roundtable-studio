@@ -58,6 +58,8 @@ BACKEND_PORT=8787
 APP_BASE_PATH=/agent-roundtable-studio
 DATA_DIR=/data
 AI_RUNTIME=simulated
+OPENAI_BASE_URL=https://api.openai.com/v1
+OPENAI_API_MODE=responses
 OPENAI_API_KEY=
 OPENAI_MODEL=gpt-4.1-mini
 OPENAI_TIMEOUT_MS=30000
@@ -66,6 +68,18 @@ ALLOWED_ORIGINS=http://127.0.0.1:5173,http://localhost:5173,http://113.44.223.11
 ```
 
 真实 `OPENAI_API_KEY` 只能存在服务器环境或 secret 文件中，不能提交到 GitHub。
+
+如果接入阿里或其他 OpenAI-compatible 服务，服务器环境变量改为：
+
+```text
+AI_RUNTIME=openai
+OPENAI_BASE_URL=<第三方 OpenAI-compatible base url>
+OPENAI_API_MODE=chat_completions
+OPENAI_API_KEY=<只写在服务器环境或 secret 中>
+OPENAI_MODEL=<第三方模型名称>
+```
+
+不要把真实 Key 写入仓库、前端或文档。已经暴露过的 Key 必须在供应商侧作废后重新生成。
 
 ## 5. Docker Compose
 

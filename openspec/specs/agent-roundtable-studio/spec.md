@@ -46,13 +46,25 @@ The system SHALL generate a structured task profile before recommending agents.
 
 ### Requirement: Agent Recommendation
 
-The system SHALL recommend agents based on the task profile and explain both inclusion and exclusion decisions.
+The system SHALL automatically assemble the agent panel based on the task profile and explain matching, gaps, auto-generated agents, inclusion, and exclusion decisions.
 
 #### Scenario: Agent panel is recommended
 
 - **WHEN** a task profile is available
-- **THEN** the system recommends a panel of agents
+- **THEN** the system automatically recommends a panel of agents without requiring the user to know which agents are needed
 - **AND** each recommended agent includes role, fit reason, covered dimension, trust status, and material access level
+
+#### Scenario: Agent assembly process is visible
+
+- **WHEN** the system assembles a panel
+- **THEN** the user sees the process steps for perspective detection, candidate search, coverage check, auto-fill, and final panel formation
+
+#### Scenario: Coverage gap is detected
+
+- **WHEN** existing visible agents do not cover a required perspective
+- **THEN** the system creates or reuses a personal trial agent for the current user
+- **AND** the generated agent is visible in the assembly trace and final panel
+- **AND** the generated agent does not enter the public or shared default pool automatically
 
 #### Scenario: Candidate is excluded
 
@@ -80,7 +92,12 @@ The system SHALL distinguish three agent classes: system public agents, personal
 
 ### Requirement: Request-Driven Agent Creation
 
-The system SHALL allow users to describe an agent need and first match existing agents before creating a new personal agent.
+The system SHALL own agent creation during task assembly, while preserving an auxiliary manual request path for advanced users.
+
+#### Scenario: User submits only a problem
+
+- **WHEN** the user submits a problem without naming any agents
+- **THEN** the system infers required expert perspectives, searches existing visible agents, and creates personal trial agents only for uncovered perspectives
 
 #### Scenario: Existing agent matches request
 

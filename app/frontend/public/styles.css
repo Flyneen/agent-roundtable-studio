@@ -282,6 +282,80 @@ textarea:focus {
   grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
 }
 
+.assembly-grid {
+  display: grid;
+  grid-template-columns: minmax(320px, 1.25fr) minmax(260px, 0.75fr);
+  gap: 14px;
+  margin-bottom: 16px;
+}
+
+.assembly-timeline {
+  display: grid;
+  gap: 10px;
+}
+
+.assembly-step {
+  display: grid;
+  grid-template-columns: 42px 1fr;
+  gap: 12px;
+  border: 1px solid rgba(22, 72, 63, 0.12);
+  border-radius: 20px;
+  padding: 14px;
+  background: #fffdf7;
+}
+
+.assembly-step > span {
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border-radius: 14px;
+  background: rgba(47, 123, 111, 0.12);
+  color: var(--forest);
+  font-weight: 900;
+}
+
+.assembly-step strong,
+.coverage-board strong,
+.autofill-note strong {
+  display: block;
+  margin-bottom: 5px;
+}
+
+.assembly-step p,
+.autofill-note p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.55;
+}
+
+.assembly-step[data-status="needs_autofill"] {
+  border-color: rgba(216, 138, 36, 0.36);
+  background: #fff8ea;
+}
+
+.assembly-step[data-status="fallback_simulated"] {
+  border-color: rgba(178, 77, 62, 0.28);
+  background: #fff7f2;
+}
+
+.coverage-board,
+.autofill-note {
+  border: 1px solid rgba(22, 72, 63, 0.12);
+  border-radius: 20px;
+  padding: 15px;
+  background: #fffdf7;
+}
+
+.coverage-board {
+  align-self: start;
+}
+
+.autofill-note {
+  margin-top: 12px;
+  background: #f5fbf7;
+}
+
 .agent-card,
 .event-card,
 .profile-card,
@@ -290,6 +364,11 @@ textarea:focus {
   border-radius: 20px;
   padding: 15px;
   background: #fffdf7;
+}
+
+.generated-agent {
+  border-color: rgba(216, 138, 36, 0.42);
+  background: linear-gradient(180deg, #fffaf0 0%, #fff7e8 100%);
 }
 
 .agent-card strong,
@@ -318,6 +397,16 @@ textarea:focus {
 .chip.active {
   background: var(--forest);
   color: #fffaf0;
+}
+
+.coverage-auto_filled {
+  background: rgba(216, 138, 36, 0.16);
+  color: #875411;
+}
+
+.coverage-weak {
+  background: rgba(178, 77, 62, 0.13);
+  color: var(--rose);
 }
 
 .filters,
@@ -407,6 +496,10 @@ textarea:focus {
   }
 
   .grid.two {
+    grid-template-columns: 1fr;
+  }
+
+  .assembly-grid {
     grid-template-columns: 1fr;
   }
 

@@ -23,6 +23,17 @@ OpenAI API
   -> 最终报告生成
 ```
 
+如果接入阿里或其他第三方模型服务，应按 OpenAI-compatible API 方式接入：
+
+```text
+OPENAI_BASE_URL=<第三方 OpenAI-compatible base url>
+OPENAI_API_MODE=chat_completions
+OPENAI_API_KEY=<只写在服务器环境或 secret 中>
+OPENAI_MODEL=<第三方模型名称>
+```
+
+第三方 Key 不得写入仓库、前端、日志或 OpenSpec 示例。已经暴露在对话、截图或日志中的 Key 应立即在供应商侧作废并重新生成。
+
 ## 2. 为什么不是 Codex 作为运行时
 
 Codex 是面向软件工程任务的 coding agent。它适合：

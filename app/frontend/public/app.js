@@ -74,18 +74,70 @@ function renderTaskProfile(profile) {
 
 function renderRecommendations(recommendation) {
   const container = $("#recommendations");
-  container.innerHTML = recommendation.recommended_agents.map((agent) => `
-    <article class="agent-card">
-      <strong>${escapeHtml(agent.display_name)}</strong>
-      <p>${escapeHtml(agent.fit_reason)}</p>
-      <div class="meta">
-        <span class="tag">${escapeHtml(agent.role)}</span>
-        <span class="tag">${escapeHtml(agent.agent_class)}</span>
-        <span class="tag">${escapeHtml(agent.access_level)}</span>
-      </div>
-    </article>
-  `).join("");
+  const trace = recommendation.assembly_trace || [];
+  const generated = recommendation.generated_agents || [];
+  const coverage = recommendation.coverage || [];
+  container.innerHTML = `
+    <div class="assembly-grid">
+      <section class="assembly-timeline">
+        ${trace.map((step, index) => `
+          <article class="assembly-step" data-status="${escapeHtml(step.status)}">
+            <span>${String(index + 1).padStart(2, "0")}</span>
+            <div>
+              <strong>${escapeHtml(step.title)}</strong>
+              <p>${escapeHtml(step.detail)}</p>
+            </div>
+          </article>
+        `).join("")}
+      </section>
+      <section class="coverage-board">
+        <strong>覆盖检查</strong>
+        <div class="meta">
+          ${coverage.map((item) => `<span class="tag coverage-${escapeHtml(item.status)}">${escapeHtml(item.perspective)}：${escapeHtml(coverageLabel(item.status))}</span>`).join("")}
+        </div>
+        ${generated.length > 0 ? `
+          <div class="autofill-note">
+            <strong>系统自动补位</strong>
+            <p>${generated.map((agent) => `${agent.display_name}（${agent.perspective}）`).map(escapeHtml).join("、")}</p>
+          </div>
+        ` : ""}
+        ${recommendation.ai_review ? `
+          <div class="autofill-note">
+            <strong>第三方 API 阵容复核</strong>
+            <p>${escapeHtml(recommendation.ai_review.panel_summary || recommendation.ai_review.status)}</p>
+          </div>
+        ` : ""}
+      </section>
+    </div>
+    <div class="agent-grid">
+      ${recommendation.recommended_agents.map((agent) => `
+        <article class="agent-card ${agent.generated_for_task ? "generated-agent" : ""}">
+          <strong>${escapeHtml(agent.display_name)}</strong>
+          <p>${escapeHtml(agent.fit_reason)}</p>
+          <div class="meta">
+            <span class="tag">${escapeHtml(agent.role)}</span>
+            <span class="tag">${escapeHtml(agent.agent_class)}</span>
+            <span class="tag">${escapeHtml(agent.access_level)}</span>
+            <span class="tag">${escapeHtml(selectionLabel(agent.selection_source))}</span>
+          </div>
+          ${agent.covered_perspectives?.length ? `<p><strong>覆盖：</strong>${agent.covered_perspectives.map(escapeHtml).join("、")}</p>` : ""}
+        </article>
+      `).join("")}
+    </div>
+  `;
   $("#runButton").classList.remove("hidden");
+}
+
+function coverageLabel(status) {
+  if (status === "auto_filled") return "系统补位";
+  if (status === "covered") return "已覆盖";
+  return "较弱";
+}
+
+function selectionLabel(source) {
+  if (source === "auto_generated_personal") return "系统生成";
+  if (source === "auto_reused_personal") return "系统复用";
+  return "匹配已有";
 }
 
 function renderAgents(agents = state.agents) {
@@ -194,7 +246,7 @@ $("#taskForm").addEventListener("submit", async (event) => {
   event.preventDefault();
   const form = new FormData(event.currentTarget);
   try {
-    toast("正在生成任务画像和推荐阵容...");
+    toast("系统正在分析问题、匹配并补齐智能体...");
     const data = await api("/api/sessions", {
       method: "POST",
       body: JSON.stringify({
@@ -207,7 +259,7 @@ $("#taskForm").addEventListener("submit", async (event) => {
     renderTaskProfile(data.session.task_profile);
     renderRecommendations(data.session.recommendation);
     setView("workspace");
-    toast("推荐阵容已生成");
+    toast("系统已完成智能体组建");
   } catch (error) {
     toast(error.message);
   }

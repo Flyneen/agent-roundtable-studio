@@ -12,7 +12,11 @@ The system SHALL provide a browser-based frontend for the first release.
 
 #### Scenario: User creates a roundtable task
 - **WHEN** the user enters a problem and optional background material
-- **THEN** the frontend guides the user through task profiling, agent recommendation, roundtable execution, and final report review
+- **THEN** the frontend guides the user through task profiling, automatic agent panel assembly, roundtable execution, and final report review
+
+#### Scenario: User reviews automatic agent assembly
+- **WHEN** the backend returns the recommended panel
+- **THEN** the frontend displays perspective detection, candidate search, coverage status, auto-generated personal agents, and final panel reasons
 
 ### Requirement: Separated Backend API
 The system SHALL provide a backend API separated from the frontend.
@@ -84,8 +88,8 @@ The system SHALL support base public agents, personal agents, and shared agent s
 - **THEN** the system displays agent class, owner, source, version, trust status, capabilities, boundaries, and sharing state
 
 #### Scenario: User requests a new agent
-- **WHEN** the user describes an agent need
-- **THEN** the system first searches available agents and only generates a personal agent draft when coverage is insufficient
+- **WHEN** the user submits a task whose required perspective is not covered by existing visible agents
+- **THEN** the system first searches available agents and automatically generates a personal trial agent only when coverage is insufficient
 
 ### Requirement: Huawei Cloud Deployment
 The system SHALL support first-release deployment to a Huawei Cloud server.

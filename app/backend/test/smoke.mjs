@@ -123,14 +123,32 @@ async function main() {
     await runSample(sample);
   }
 
+  const autoFilled = await post("/api/sessions", {
+    problem: "我要准备一个医疗健康产品上线评审，系统需要自动判断要哪些专家，尤其是医疗合规和宣传边界。",
+    background: "使用者不知道该找哪些智能体，系统必须自动匹配已有 Agent，不足时自动生成个人试用 Agent，并展示组建过程。",
+    targetOutput: "医疗健康上线评审报告"
+  });
+  if (!autoFilled.session.recommendation?.assembly_trace?.length) {
+    throw new Error("Assembly trace missing");
+  }
+  if (!autoFilled.session.recommendation?.generated_agents?.length) {
+    throw new Error("Expected system generated personal agent for missing perspective");
+  }
+  if (!autoFilled.session.agent_panel.some((agent) => agent.generated_for_task)) {
+    throw new Error("Generated agent was not included in current panel");
+  }
+
   const request = await post("/api/agents/request", {
     requestText: "我需要一个医疗合规评审 Agent，检查健康数据、授权和宣传边界。"
   });
-  if (request.mode !== "created_personal_draft") {
-    throw new Error(`Expected personal draft, got ${request.mode}`);
+  const agentToShare = request.mode === "created_personal_draft"
+    ? request.draft
+    : request.matches.find((item) => item.agent_class === "personal_private");
+  if (!agentToShare?.agent_id) {
+    throw new Error(`Expected personal draft or reusable personal match, got ${request.mode}`);
   }
 
-  const share = await post(`/api/agents/${request.draft.agent_id}/share`, {
+  const share = await post(`/api/agents/${agentToShare.agent_id}/share`, {
     sensitiveDataWarningAcknowledged: true,
     notes: "Smoke test share record"
   });

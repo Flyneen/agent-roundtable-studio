@@ -7,7 +7,9 @@ const perspectiveMap = [
   ["架构", ["软件架构", "API", "数据模型", "部署"]],
   ["安全", ["安全架构", "权限", "密钥管理"]],
   ["隐私", ["隐私", "数据最小化", "共享边界"]],
-  ["信任", ["Agent 身份", "版本", "共享治理"]]
+  ["信任", ["Agent 身份", "版本", "共享治理"]],
+  ["合规", ["合规", "法规", "审计", "监管", "法务"]],
+  ["行业专家", ["医疗", "教育", "金融", "制造", "供应链", "市场", "运营", "销售", "财务", "人力", "招聘", "采购", "品牌", "科研"]]
 ];
 
 export function generateTaskProfile({ problem, background = "", targetOutput = "评审报告" }, store) {
@@ -50,33 +52,96 @@ export function generateTaskProfile({ problem, background = "", targetOutput = "
 }
 
 export function recommendAgents(taskProfile, agents, store) {
-  const scored = agents.map((agent) => {
+  const visibleAgents = agents.filter(isVisibleToLocalUser);
+  const assemblyTrace = [
+    {
+      stage: "task_profile",
+      title: "识别问题所需视角",
+      detail: `系统识别到 ${taskProfile.required_perspectives.length} 个必要视角：${taskProfile.required_perspectives.join("、")}。`,
+      status: "done"
+    },
+    {
+      stage: "candidate_search",
+      title: "检索可用智能体",
+      detail: `已检索基础公共、个人和共享 Agent，共 ${visibleAgents.length} 个可用候选。`,
+      status: "done"
+    }
+  ];
+
+  const scored = visibleAgents.map((agent) => {
     const score = scoreAgent(agent, taskProfile);
     return { agent, score };
   }).sort((a, b) => b.score - a.score);
 
-  const recommended = scored
-    .filter((item) => item.agent.default_pool_eligible !== false)
-    .slice(0, 7)
+  const selectedExisting = selectExistingAgents(scored, taskProfile);
+  const missingBeforeAutofill = taskProfile.required_perspectives.filter((perspective) =>
+    !selectedExisting.some(({ agent }) => coversPerspective(agent, perspective))
+  );
+
+  assemblyTrace.push({
+    stage: "coverage_check",
+    title: "检查阵容覆盖缺口",
+    detail: missingBeforeAutofill.length > 0
+      ? `现有阵容对 ${missingBeforeAutofill.join("、")} 覆盖不足，系统将自动补位。`
+      : "现有 Agent 已覆盖本次任务所需主要视角，无需新增 Agent。",
+    status: missingBeforeAutofill.length > 0 ? "needs_autofill" : "done"
+  });
+
+  const autofillResults = missingBeforeAutofill.map((perspective) =>
+    ensureAutofillAgent(perspective, taskProfile, visibleAgents, store)
+  );
+
+  if (autofillResults.length > 0) {
+    const createdCount = autofillResults.filter((item) => item.mode === "created_personal_draft").length;
+    const reusedCount = autofillResults.filter((item) => item.mode === "reused_personal").length;
+    assemblyTrace.push({
+      stage: "agent_autofill",
+      title: "自动补齐个人试用 Agent",
+      detail: [
+        createdCount > 0 ? `新生成 ${createdCount} 个个人试用 Agent` : "",
+        reusedCount > 0 ? `复用 ${reusedCount} 个个人 Agent` : "",
+        "这些 Agent 默认仅归属当前用户，不进入公共推荐池。"
+      ].filter(Boolean).join("；"),
+      status: "done"
+    });
+  }
+
+  const generatedAgents = autofillResults.map((item) => item.agent);
+  const finalPanel = [
+    ...selectedExisting,
+    ...generatedAgents.map((agent) => ({ agent, score: scoreAgent(agent, taskProfile) }))
+  ];
+  const recommended = finalPanel
     .map(({ agent, score }) => ({
       agent_id: agent.agent_id,
       agent_version_id: agent.current_version_id,
       display_name: agent.display_name,
       agent_class: agent.agent_class,
       trust_status: agent.trust_status,
-      access_level: "summary_only",
-      score,
+      access_level: agent.permissions?.includes("summary_only") ? "summary_only" : "problem_only",
+      score: score ?? scoreAgent(agent, taskProfile),
       role: inferPanelRole(agent),
-      fit_reason: `覆盖 ${matchedCapabilities(agent, taskProfile).join("、") || "通用审议"} 视角。`
+      fit_reason: agent.selection_reason || `覆盖 ${matchedCapabilities(agent, taskProfile).join("、") || "通用审议"} 视角。`,
+      selection_source: agent.selection_source || "matched_existing",
+      generated_for_task: agent.source_type === "auto_generated_for_task",
+      covered_perspectives: taskProfile.required_perspectives.filter((perspective) => coversPerspective(agent, perspective))
     }));
 
   const excluded = scored
-    .slice(7, 14)
+    .filter(({ agent }) => !finalPanel.some((item) => item.agent_id === agent.agent_id))
+    .slice(0, 7)
     .map(({ agent }) => ({
       agent_id: agent.agent_id,
       display_name: agent.display_name,
       reason: "当前阵容已覆盖主要视角，暂不加入以控制讨论复杂度。"
     }));
+
+  assemblyTrace.push({
+    stage: "panel_ready",
+    title: "形成圆桌阵容",
+    detail: `最终阵容 ${recommended.length} 个 Agent，其中系统自动补位 ${generatedAgents.length} 个。`,
+    status: "done"
+  });
 
   return {
     recommendation_id: store.newId("rec"),
@@ -84,12 +149,21 @@ export function recommendAgents(taskProfile, agents, store) {
     excluded_agents: excluded,
     coverage: taskProfile.required_perspectives.map((perspective) => ({
       perspective,
-      status: recommended.some((item) => {
-        const agent = agents.find((candidate) => candidate.agent_id === item.agent_id);
-        return agent && matchedCapabilities(agent, { required_perspectives: [perspective] }).length > 0;
-      }) ? "covered" : "weak"
+      status: recommended.some((item) => item.covered_perspectives.includes(perspective))
+        ? (autofillResults.some((item) => item.perspective === perspective) ? "auto_filled" : "covered")
+        : "weak"
     })),
-    missing_perspectives: [],
+    missing_perspectives: missingBeforeAutofill,
+    generated_agents: autofillResults.map((item) => ({
+      mode: item.mode,
+      perspective: item.perspective,
+      agent_id: item.agent.agent_id,
+      display_name: item.agent.display_name,
+      agent_class: item.agent.agent_class,
+      trust_status: item.agent.trust_status,
+      reason: item.reason
+    })),
+    assembly_trace: assemblyTrace,
     created_at: new Date().toISOString()
   };
 }
@@ -398,6 +472,146 @@ function matchedCapabilities(agent, taskProfile) {
   return agent.capabilities.filter((capability) =>
     perspectives.some((perspective) => capability.includes(perspective) || perspective.includes(capability.slice(0, 2)))
   );
+}
+
+function isVisibleToLocalUser(agent) {
+  return agent.visibility_scope === "all_users" || agent.owner_user_id === "local-user";
+}
+
+function coversPerspective(agent, perspective) {
+  const text = [
+    agent.display_name,
+    agent.summary,
+    ...(agent.capabilities || [])
+  ].join(" ").toLowerCase();
+  return perspective.toLowerCase().split(/\s+/).some((part) => text.includes(part))
+    || (agent.capabilities || []).some((capability) =>
+      capability.includes(perspective) || perspective.includes(capability.slice(0, 2))
+    );
+}
+
+function selectExistingAgents(scored, taskProfile) {
+  const selected = [];
+  const eligible = scored.filter((item) => item.agent.default_pool_eligible !== false || item.agent.owner_user_id === "local-user");
+
+  for (const perspective of taskProfile.required_perspectives) {
+    const best = eligible.find((item) =>
+      !selected.some((selectedItem) => selectedItem.agent.agent_id === item.agent.agent_id)
+      && coversPerspective(item.agent, perspective)
+    );
+    if (best) selected.push(best);
+  }
+
+  for (const item of eligible) {
+    if (selected.length >= 7) break;
+    if (item.score <= 0) continue;
+    if (!selected.some((selectedItem) => selectedItem.agent.agent_id === item.agent.agent_id)) {
+      selected.push(item);
+    }
+  }
+
+  return selected;
+}
+
+function ensureAutofillAgent(perspective, taskProfile, agents, store) {
+  const reusable = agents.find((agent) =>
+    agent.owner_user_id === "local-user"
+    && agent.source_type === "auto_generated_for_task"
+    && coversPerspective(agent, perspective)
+  );
+
+  if (reusable) {
+    return {
+      mode: "reused_personal",
+      perspective,
+      agent: {
+        ...reusable,
+        selection_source: "auto_reused_personal",
+        selection_reason: `系统识别到 ${perspective} 视角缺口，复用此前自动生成的个人试用 Agent。`
+      },
+      reason: `复用已有个人 Agent 补齐 ${perspective}。`
+    };
+  }
+
+  const agent = createAutofillAgent(perspective, taskProfile, store);
+  return {
+    mode: "created_personal_draft",
+    perspective,
+    agent: {
+      ...agent,
+      selection_source: "auto_generated_personal",
+      selection_reason: `系统识别到 ${perspective} 视角缺口，自动生成个人试用 Agent 并仅用于当前用户。`
+    },
+    reason: `自动生成个人试用 Agent 补齐 ${perspective}。`
+  };
+}
+
+function createAutofillAgent(perspective, taskProfile, store) {
+  const agentId = store.newId("agent");
+  const agent = {
+    agent_id: agentId,
+    display_name: `${perspective}补位评审 Agent`,
+    summary: `系统根据当前问题自动生成，用于补齐 ${perspective} 视角：${taskProfile.original_problem.slice(0, 90)}`,
+    agent_class: "personal_private",
+    owner_user_id: "local-user",
+    trust_status: "trial_only",
+    visibility_scope: "owner_only",
+    publish_status: "draft",
+    default_pool_eligible: false,
+    current_version_id: `${agentId}:v1`,
+    capabilities: inferCapabilitiesForPerspective(perspective, taskProfile),
+    boundaries: [
+      "系统自动补位生成，仅作为个人试用 Agent",
+      "未通过验证前不进入基础公共或共享推荐池",
+      "只参与当前用户可见范围内的任务",
+      "默认只能读取问题和摘要，不读取完整私密材料"
+    ],
+    permissions: ["problem_only"],
+    created_by: "system",
+    source_type: "auto_generated_for_task",
+    trigger_request: taskProfile.original_problem,
+    generated_for_task_profile_id: taskProfile.task_profile_id
+  };
+
+  store.insert("agents", agent);
+  store.insert("agent_versions", {
+    agent_version_id: agent.current_version_id,
+    agent_id: agent.agent_id,
+    version_label: "v1",
+    content_hash: `${agent.agent_id}:auto:${perspective}`,
+    source_hash: "auto_generated_for_task",
+    source_type: "auto_generated_for_task",
+    instructions_snapshot: agent.summary,
+    metadata_snapshot: {
+      capabilities: agent.capabilities,
+      boundaries: agent.boundaries,
+      perspective,
+      generated_for_task_profile_id: taskProfile.task_profile_id
+    },
+    release_status: "trial",
+    created_at: new Date().toISOString()
+  });
+
+  return agent;
+}
+
+function inferCapabilitiesForPerspective(perspective, taskProfile) {
+  const defaults = {
+    "合规": ["合规", "法规边界", "审计", "禁止过度承诺"],
+    "行业专家": ["行业专家", "行业语境", "专业风险", "落地约束"],
+    "产品": ["产品定位", "用户价值", "需求优先级"],
+    "体验": ["用户路径", "可用性", "信息架构"],
+    "UI": ["界面设计", "视觉层级", "组件状态"],
+    "工作流": ["工作流", "状态机", "阶段门禁"],
+    "多 Agent": ["多 Agent 编排", "质疑机制", "上下文治理"],
+    "架构": ["软件架构", "API", "数据模型"],
+    "安全": ["安全架构", "权限", "部署安全"],
+    "隐私": ["隐私", "数据最小化", "共享边界"],
+    "信任": ["Agent 身份", "版本", "共享治理"]
+  };
+  const base = defaults[perspective] || [perspective, "专项评审", "风险识别", "输出建议"];
+  const taskHints = taskProfile.evidence_needs?.slice(0, 2) || [];
+  return [...new Set([...base, ...taskHints])];
 }
 
 function scoreAgent(agent, taskProfile) {

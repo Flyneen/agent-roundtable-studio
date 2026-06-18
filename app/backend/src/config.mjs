@@ -10,9 +10,16 @@ function normalizeBasePath(value) {
   return withLeadingSlash.replace(/\/+$/, "");
 }
 
+function normalizeBaseUrl(value) {
+  return (value || "https://api.openai.com/v1").replace(/\/+$/, "");
+}
+
 export function loadConfig(overrides = {}) {
   const env = { ...process.env, ...overrides };
   const dataDir = path.resolve(appRoot, env.DATA_DIR || "./backend/data");
+  const openaiBaseUrl = normalizeBaseUrl(env.OPENAI_BASE_URL);
+  const openaiApiMode = env.OPENAI_API_MODE
+    || (openaiBaseUrl.includes("api.openai.com") ? "responses" : "chat_completions");
 
   return {
     appEnv: env.APP_ENV || "development",
@@ -22,6 +29,8 @@ export function loadConfig(overrides = {}) {
     dataDir,
     storeFile: path.join(dataDir, "store.json"),
     aiRuntime: env.AI_RUNTIME || "simulated",
+    openaiBaseUrl,
+    openaiApiMode,
     openaiApiKey: env.OPENAI_API_KEY || "",
     openaiModel: env.OPENAI_MODEL || "gpt-4.1-mini",
     openaiTimeoutMs: Number(env.OPENAI_TIMEOUT_MS || 30000),

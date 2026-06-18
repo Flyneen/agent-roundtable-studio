@@ -8,10 +8,12 @@ import { loadConfig } from "./config.mjs";
 import { JsonStore } from "./store.mjs";
 import {
   createPersonalAgentDraft,
-  generateTaskProfile,
-  recommendAgents,
-  runRoundtable
 } from "./runtime/simulatedRuntime.mjs";
+import {
+  generateTaskProfileHybrid,
+  recommendAgentsHybrid,
+  runRoundtableHybrid
+} from "./runtime/hybridRuntime.mjs";
 import { OpenAIAdapter } from "./runtime/openaiAdapter.mjs";
 import { evaluatePolicyRequest } from "./policyGateway.mjs";
 
@@ -102,17 +104,17 @@ function requireText(value, field) {
   return value.trim();
 }
 
-function createSession(body) {
+async function createSession(body) {
   const problem = requireText(body.problem, "problem");
   const targetOutput = body.targetOutput || "评审报告";
-  const taskProfile = generateTaskProfile({
+  const taskProfile = await generateTaskProfileHybrid({
     problem,
     background: body.background || "",
     targetOutput
-  }, store);
+  }, store, openai, config);
 
   const agents = store.list("agents");
-  const recommendation = recommendAgents(taskProfile, agents, store);
+  const recommendation = await recommendAgentsHybrid(taskProfile, agents, store, openai, config);
   const session = {
     session_id: store.newId("session"),
     run_id: store.newId("run"),
@@ -219,11 +221,11 @@ async function route(req, res) {
     if (pathname === "/api/task-profiles" && req.method === "POST") {
       const body = await readJson(req);
       const problem = requireText(body.problem, "problem");
-      const taskProfile = generateTaskProfile({
+      const taskProfile = await generateTaskProfileHybrid({
         problem,
         background: body.background || "",
         targetOutput: body.targetOutput || "评审报告"
-      }, store);
+      }, store, openai, config);
       return sendJson(res, 201, { taskProfile }, headers);
     }
 
@@ -248,7 +250,7 @@ async function route(req, res) {
 
     if (pathname === "/api/sessions" && req.method === "POST") {
       const body = await readJson(req);
-      const session = createSession(body);
+      const session = await createSession(body);
       return sendJson(res, 201, { session }, headers);
     }
 
@@ -270,7 +272,7 @@ async function route(req, res) {
         const artifacts = store.list("artifacts").filter((artifact) => artifact.session_id === session.session_id);
         return sendJson(res, 200, { session, events, artifacts, alreadyComplete: true }, headers);
       }
-      const result = runRoundtable(session, store);
+      const result = await runRoundtableHybrid(session, store, openai, config);
       return sendJson(res, 200, result, headers);
     }
 

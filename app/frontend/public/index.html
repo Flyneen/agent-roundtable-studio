@@ -60,7 +60,7 @@
                 输出目标
                 <input name="targetOutput" value="评审报告" />
               </label>
-              <button class="primary-button" type="submit">生成任务画像并推荐 Agent</button>
+              <button class="primary-button" type="submit">让系统自动组建圆桌</button>
             </form>
 
             <div class="panel">
@@ -75,7 +75,7 @@
           <div class="panel">
             <div class="panel-head">
               <span>03</span>
-              <h2>推荐阵容</h2>
+              <h2>系统组建圆桌</h2>
             </div>
             <div id="recommendations" class="agent-grid"></div>
             <button id="runButton" class="primary-button hidden">启动结构化圆桌</button>
@@ -104,10 +104,10 @@
                 <h2>诉求驱动生成</h2>
               </div>
               <label>
-                你需要什么样的 Agent？
+                辅助入口：描述你想补充的专业视角
                 <textarea name="requestText">我需要一个医疗合规评审 Agent，检查健康数据、用户授权、宣传用语和隐私边界。</textarea>
               </label>
-              <button class="primary-button" type="submit">先匹配，不足则生成个人 Agent</button>
+              <button class="primary-button" type="submit">手动触发一次匹配/生成</button>
               <div id="agentRequestResult" class="result-box"></div>
             </form>
           </div>
