@@ -566,7 +566,7 @@ def recommend_agents(profile, store, client):
 
     generated = [ensure_personal_agent(perspective, profile, store) for perspective in missing]
     selected_agents = cap_panel_agents([item["agent"] for item in selected], profile)
-    generated_agents = generated[: max(0, 6 - len(selected_agents))]
+    generated_agents = generated[: max(0, panel_limit() - len(selected_agents))]
     final_panel = selected_agents + generated_agents
     recommended = [recommendation_entry(agent, profile, "matched_existing") for agent in selected_agents]
     recommended += [recommendation_entry(agent, profile, "auto_generated_personal") for agent in generated_agents]
@@ -635,7 +635,12 @@ def trace_step(stage, title, detail, evidence=None, duration_ms=None, status=Non
     }
 
 
-def cap_panel_agents(agents, profile, limit=6):
+def panel_limit():
+    return 4 if runtime_mode() == "openai" else 6
+
+
+def cap_panel_agents(agents, profile, limit=None):
+    limit = limit or panel_limit()
     if len(agents) <= limit:
         return agents
     picked = []
@@ -883,13 +888,14 @@ def run_roundtable(session, store, client):
 
     agents = [store.get("agents", "agent_id", item["agent_id"]) for item in session.get("agent_panel", [])]
     agents = [agent for agent in agents if agent]
-    agents = agents[:6]
+    agents = agents[:panel_limit()]
     events = []
 
     positions = [make_position(agent, session, client) for agent in agents]
     events.extend(positions)
 
-    challenge_targets = positions[: min(3, len(positions))]
+    max_challenges = 2 if runtime_mode() == "openai" else 3
+    challenge_targets = positions[: min(max_challenges, len(positions))]
     challenges = []
     for index, target in enumerate(challenge_targets):
         challenger = agents[(index + 1) % len(agents)] if agents else None
