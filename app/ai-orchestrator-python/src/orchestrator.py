@@ -636,7 +636,7 @@ def trace_step(stage, title, detail, evidence=None, duration_ms=None, status=Non
 
 
 def panel_limit():
-    return 4 if runtime_mode() == "openai" else 6
+    return 3 if runtime_mode() == "openai" else 6
 
 
 def cap_panel_agents(agents, profile, limit=None):
@@ -894,7 +894,7 @@ def run_roundtable(session, store, client):
     positions = [make_position(agent, session, client) for agent in agents]
     events.extend(positions)
 
-    max_challenges = 2 if runtime_mode() == "openai" else 3
+    max_challenges = 1 if runtime_mode() == "openai" else 3
     challenge_targets = positions[: min(max_challenges, len(positions))]
     challenges = []
     for index, target in enumerate(challenge_targets):
