@@ -64,10 +64,14 @@ function renderTaskProfile(profile) {
     <div class="profile-card">
       <strong>${escapeHtml(profile.task_type)} / ${escapeHtml(profile.risk_level)}</strong>
       <p>${escapeHtml(profile.original_problem)}</p>
+      <p><strong>行业：</strong>${escapeHtml(profile.industry || "未识别")}　<strong>决策类型：</strong>${escapeHtml(profile.decision_type || "未识别")}</p>
+      <p><strong>用户目标：</strong>${escapeHtml(profile.user_goal || "待确认")}</p>
       <div class="meta">
         ${profile.required_perspectives.map((item) => `<span class="tag">${escapeHtml(item)}</span>`).join("")}
       </div>
       <p><strong>证据需求：</strong>${profile.evidence_needs.map(escapeHtml).join("、")}</p>
+      ${profile.missing_information?.length ? `<p><strong>缺失信息：</strong>${profile.missing_information.map(escapeHtml).join("、")}</p>` : ""}
+      ${renderRuntimeEvidence(profile.runtime_evidence)}
     </div>
   `;
 }
@@ -86,6 +90,11 @@ function renderRecommendations(recommendation) {
             <div>
               <strong>${escapeHtml(step.title)}</strong>
               <p>${escapeHtml(step.detail)}</p>
+              <div class="meta">
+                <span class="tag">${escapeHtml(step.runtime_mode || "runtime:n/a")}</span>
+                ${step.model ? `<span class="tag">${escapeHtml(step.model)}</span>` : ""}
+                <span class="tag">${Number(step.duration_ms || 0)}ms</span>
+              </div>
             </div>
           </article>
         `).join("")}
@@ -103,8 +112,9 @@ function renderRecommendations(recommendation) {
         ` : ""}
         ${recommendation.ai_review ? `
           <div class="autofill-note">
-            <strong>第三方 API 阵容复核</strong>
+            <strong>AI 阵容复核</strong>
             <p>${escapeHtml(recommendation.ai_review.panel_summary || recommendation.ai_review.status)}</p>
+            ${recommendation.ai_review.selection_notes?.length ? `<p>${recommendation.ai_review.selection_notes.map(escapeHtml).join("；")}</p>` : ""}
           </div>
         ` : ""}
       </section>
@@ -119,13 +129,33 @@ function renderRecommendations(recommendation) {
             <span class="tag">${escapeHtml(agent.agent_class)}</span>
             <span class="tag">${escapeHtml(agent.access_level)}</span>
             <span class="tag">${escapeHtml(selectionLabel(agent.selection_source))}</span>
+            ${agent.quality_status ? `<span class="tag">${escapeHtml(agent.quality_status)}</span>` : ""}
           </div>
           ${agent.covered_perspectives?.length ? `<p><strong>覆盖：</strong>${agent.covered_perspectives.map(escapeHtml).join("、")}</p>` : ""}
+          ${agent.responsibilities?.length ? `<p><strong>职责：</strong>${agent.responsibilities.map(escapeHtml).join("；")}</p>` : ""}
         </article>
       `).join("")}
     </div>
   `;
   $("#runButton").classList.remove("hidden");
+}
+
+function renderRuntimeEvidence(items = []) {
+  if (!Array.isArray(items) || items.length === 0) return "";
+  return `
+    <div class="runtime-evidence">
+      <strong>运行证据</strong>
+      ${items.map((item) => `
+        <div class="meta">
+          <span class="tag">${escapeHtml(item.schema_name || "schema")}</span>
+          <span class="tag">${escapeHtml(item.status || "status")}</span>
+          <span class="tag">${escapeHtml(item.runtime_mode || "runtime")}</span>
+          ${item.model ? `<span class="tag">${escapeHtml(item.model)}</span>` : ""}
+          <span class="tag">${Number(item.latency_ms || 0)}ms</span>
+        </div>
+      `).join("")}
+    </div>
+  `;
 }
 
 function coverageLabel(status) {
@@ -153,6 +183,8 @@ function renderAgents(agents = state.agents) {
         <span class="tag">${escapeHtml(agent.publish_status || "draft")}</span>
       </div>
       <p><strong>能力：</strong>${agent.capabilities.map(escapeHtml).join("、")}</p>
+      ${agent.applicable_scenarios?.length ? `<p><strong>适用：</strong>${agent.applicable_scenarios.map(escapeHtml).join("、")}</p>` : ""}
+      ${agent.quality_status ? `<p><strong>质量状态：</strong>${escapeHtml(agent.quality_status)}</p>` : ""}
       ${agent.agent_class === "personal_private" ? `<button class="ghost-button mini" data-share-agent="${escapeHtml(agent.agent_id)}">记录为共享 Agent</button>` : ""}
     </article>
   `).join("");
@@ -188,6 +220,9 @@ function renderRoundtable(events) {
       <div class="meta">
         <span class="tag">${escapeHtml(event.event_id)}</span>
         <span class="tag">${escapeHtml(event.agent_version_id || "n/a")}</span>
+        ${event.runtime_evidence?.status ? `<span class="tag">${escapeHtml(event.runtime_evidence.status)}</span>` : ""}
+        ${event.runtime_evidence?.model ? `<span class="tag">${escapeHtml(event.runtime_evidence.model)}</span>` : ""}
+        ${event.runtime_evidence?.latency_ms !== undefined ? `<span class="tag">${Number(event.runtime_evidence.latency_ms)}ms</span>` : ""}
       </div>
     </article>
   `).join("");
@@ -211,6 +246,7 @@ async function loadSettings() {
     const settings = await api("/api/settings");
     $("#runtimeLabel").textContent = `Runtime: ${settings.aiRuntime}`;
     $("#apiBaseLabel").textContent = API_BASE;
+    $("#architectureLabel").textContent = settings.architecture || "architecture: legacy";
     const policy = await api("/api/policy/evaluate", {
       method: "POST",
       body: JSON.stringify({
@@ -223,6 +259,7 @@ async function loadSettings() {
   } catch (error) {
     $("#runtimeLabel").textContent = "后端未连接";
     $("#apiBaseLabel").textContent = API_BASE;
+    $("#architectureLabel").textContent = "architecture: unavailable";
     $("#policyLabel").textContent = "Policy: unavailable";
   }
 }
@@ -246,7 +283,7 @@ $("#taskForm").addEventListener("submit", async (event) => {
   event.preventDefault();
   const form = new FormData(event.currentTarget);
   try {
-    toast("系统正在分析问题、匹配并补齐智能体...");
+    toast("系统正在真实分析问题、检索 Agent、审查阵容...");
     const data = await api("/api/sessions", {
       method: "POST",
       body: JSON.stringify({
@@ -259,7 +296,7 @@ $("#taskForm").addEventListener("submit", async (event) => {
     renderTaskProfile(data.session.task_profile);
     renderRecommendations(data.session.recommendation);
     setView("workspace");
-    toast("系统已完成智能体组建");
+    toast("系统已完成圆桌组建，可查看运行证据");
   } catch (error) {
     toast(error.message);
   }
@@ -302,7 +339,9 @@ $("#agentRequestForm").addEventListener("submit", async (event) => {
 $("#healthButton").addEventListener("click", async () => {
   try {
     const health = await api("/health");
-    toast(`后端正常：${health.runtime}`);
+    const runtime = health.runtime || health.orchestrator?.runtime || "unknown";
+    const architecture = health.architecture || health.orchestrator?.architecture || "unknown";
+    toast(`后端正常：${runtime} / ${architecture}`);
   } catch (error) {
     toast(`后端不可用：${error.message}`);
   }

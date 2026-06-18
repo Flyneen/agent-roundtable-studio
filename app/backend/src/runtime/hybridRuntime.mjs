@@ -1,11 +1,11 @@
 import {
-  generateTaskProfile as simulateTaskProfile,
-  recommendAgents as simulateRecommendAgents,
-  runRoundtable as simulateRunRoundtable
-} from "./simulatedRuntime.mjs";
+  generateTaskProfile as generateDevTaskProfile,
+  recommendAgents as recommendDevAgents,
+  runRoundtable as runDevRoundtable
+} from "./devRuntime.mjs";
 
 export async function generateTaskProfileHybrid(input, store, openai, config) {
-  const profile = simulateTaskProfile(input, store);
+  const profile = generateDevTaskProfile(input, store);
   if (!shouldUseOpenAI(openai, config)) {
     return profile;
   }
@@ -40,7 +40,7 @@ export async function generateTaskProfileHybrid(input, store, openai, config) {
       ai_enrichment: {
         provider_mode: config.openaiApiMode,
         model: config.openaiModel,
-        status: "fallback_simulated",
+        status: "dev_degraded_after_error",
         error: error.message
       }
     }) || profile;
@@ -48,7 +48,7 @@ export async function generateTaskProfileHybrid(input, store, openai, config) {
 }
 
 export async function recommendAgentsHybrid(taskProfile, agents, store, openai, config) {
-  const recommendation = simulateRecommendAgents(taskProfile, agents, store);
+  const recommendation = recommendDevAgents(taskProfile, agents, store);
   if (!shouldUseOpenAI(openai, config)) {
     return recommendation;
   }
@@ -91,7 +91,7 @@ export async function recommendAgentsHybrid(taskProfile, agents, store, openai, 
       ai_review: {
         provider_mode: config.openaiApiMode,
         model: config.openaiModel,
-        status: "fallback_simulated",
+        status: "dev_degraded_after_error",
         error: error.message
       },
       assembly_trace: [
@@ -99,8 +99,8 @@ export async function recommendAgentsHybrid(taskProfile, agents, store, openai, 
         {
           stage: "ai_panel_review",
           title: "第三方 API 审查阵容",
-          detail: `第三方 API 暂不可用，已保留本地模拟编排结果：${error.message}`,
-          status: "fallback_simulated"
+          detail: `第三方 API 暂不可用，已保留本地开发降级编排结果：${error.message}`,
+          status: "dev_degraded_after_error"
         }
       ]
     };
@@ -108,7 +108,7 @@ export async function recommendAgentsHybrid(taskProfile, agents, store, openai, 
 }
 
 export async function runRoundtableHybrid(session, store, openai, config) {
-  const result = simulateRunRoundtable(session, store);
+  const result = runDevRoundtable(session, store);
   if (!shouldUseOpenAI(openai, config) || result.partial) {
     return result;
   }
@@ -154,7 +154,7 @@ export async function runRoundtableHybrid(session, store, openai, config) {
       ai_review: {
         provider_mode: config.openaiApiMode,
         model: config.openaiModel,
-        status: "fallback_simulated",
+        status: "dev_degraded_after_error",
         error: error.message
       }
     });

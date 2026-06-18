@@ -14,7 +14,7 @@ const child = spawn(process.execPath, ["backend/src/server.mjs"], {
     BACKEND_PORT: String(port),
     APP_BASE_PATH: "/agent-roundtable-studio",
     DATA_DIR: "./backend/data-test",
-    AI_RUNTIME: "simulated"
+    AI_RUNTIME: "dev"
   },
   stdio: ["ignore", "pipe", "pipe"]
 });
@@ -178,7 +178,7 @@ async function main() {
   }
 
   const partialCreated = await post("/api/sessions", {
-    problem: "[partial] 模拟失败：验证不完整圆桌是否标记为 partial 而不是 complete。",
+    problem: "[partial] 开发降级失败：验证不完整圆桌是否标记为 partial 而不是 complete。",
     background: "这是上线前失败处理验收。",
     targetOutput: "失败处理验收"
   });

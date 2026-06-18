@@ -8,7 +8,7 @@ import { loadConfig } from "./config.mjs";
 import { JsonStore } from "./store.mjs";
 import {
   createPersonalAgentDraft,
-} from "./runtime/simulatedRuntime.mjs";
+} from "./runtime/devRuntime.mjs";
 import {
   generateTaskProfileHybrid,
   recommendAgentsHybrid,

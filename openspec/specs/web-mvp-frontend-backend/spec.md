@@ -1,7 +1,7 @@
 # web-mvp-frontend-backend Specification
 
 ## Purpose
-This specification defines the first Web release of Agent Roundtable Studio: a browser frontend, separated backend API, structured roundtable orchestrator, agent runtime abstraction, deployment model, and minimum security controls for the Huawei Cloud preview.
+This specification defines the first Web release of Agent Roundtable Studio: a browser frontend, Java API Gateway, Python AI Orchestrator, structured roundtable runtime, deployment model, and minimum security controls for the Huawei Cloud preview.
 ## Requirements
 ### Requirement: Web MVP Frontend
 The system SHALL provide a browser-based frontend for the first release.
@@ -19,18 +19,19 @@ The system SHALL provide a browser-based frontend for the first release.
 - **THEN** the frontend displays perspective detection, candidate search, coverage status, auto-generated personal agents, and final panel reasons
 
 ### Requirement: Separated Backend API
-The system SHALL provide a backend API separated from the frontend.
+The system SHALL provide a Java API Gateway separated from the frontend and from the Python AI Orchestrator.
 
 #### Scenario: Frontend requests task profile
 - **WHEN** the frontend submits a problem to the backend
-- **THEN** the backend returns a structured task profile rather than free-form text only
+- **THEN** the Java API Gateway delegates AI work to the Python AI Orchestrator
+- **AND** the response returns a structured task profile rather than free-form text only
 
 #### Scenario: Frontend requests roundtable state
 - **WHEN** the frontend queries a roundtable session
 - **THEN** the backend returns session state, stage, participating agents, trace events, evidence gaps, and artifacts
 
 ### Requirement: Roundtable Orchestrator
-The system SHALL implement a backend roundtable orchestrator for staged execution.
+The system SHALL implement a Python AI Orchestrator for staged execution.
 
 #### Scenario: User starts a session
 - **WHEN** the user confirms the agent panel
@@ -41,7 +42,7 @@ The system SHALL implement a backend roundtable orchestrator for staged executio
 - **THEN** the orchestrator advances to the next stage and records structured trace events
 
 ### Requirement: Agent Runtime
-The system SHALL provide an agent runtime abstraction independent from the frontend.
+The system SHALL provide an agent runtime abstraction independent from the frontend and Java API Gateway.
 
 #### Scenario: Agent is invoked
 - **WHEN** the orchestrator invokes an agent
@@ -55,19 +56,22 @@ The system SHALL provide an agent runtime abstraction independent from the front
 The system SHALL use OpenAI API as the product AI runtime when real model execution is enabled.
 
 #### Scenario: Real model execution is enabled
-- **WHEN** the backend needs task profiling, agent recommendation, structured event generation, or report generation
-- **THEN** it calls OpenAI API through a backend adapter
+- **WHEN** the Python AI Orchestrator needs task profiling, agent recommendation, structured event generation, or report generation
+- **THEN** it calls OpenAI-compatible API through a server-side adapter
+- **AND** the assembly trace records runtime mode, schema name, model, call status, and latency
 
 #### Scenario: API key is configured
 - **WHEN** OpenAI API is used
 - **THEN** the API key is read from server-side environment configuration and is never exposed to the frontend
 
 ### Requirement: Simulated Runtime
-The system SHALL support a simulated AI runtime for development and fallback.
+The system SHALL support a clearly labeled development-degraded runtime for local development and fallback.
 
 #### Scenario: API is unavailable
 - **WHEN** the OpenAI API key is missing or the API call fails during development
-- **THEN** the system can run a deterministic simulated execution path to validate UI and workflow state
+- **THEN** the system can run a deterministic degraded execution path to validate UI and workflow state
+- **AND** the UI and API mark the result as `dev` or `dev_degraded_missing_key`
+- **AND** the system SHALL NOT present that result as production-quality AI reasoning
 
 ### Requirement: Structured Data Store
 The system SHALL persist core workflow data in structured storage.
@@ -96,7 +100,9 @@ The system SHALL support first-release deployment to a Huawei Cloud server.
 
 #### Scenario: Application is deployed
 - **WHEN** the Web MVP is deployed on the server
-- **THEN** the application is deployed as a Docker container that serves the frontend, backend API, and health endpoint
+- **THEN** the frontend and Java API Gateway run in `agent-roundtable-studio`
+- **AND** the Python AI Orchestrator runs in `ai-orchestrator-python`
+- **AND** both services are deployed by Docker Compose on an internal Docker network
 
 #### Scenario: Deployment uses secrets
 - **WHEN** production secrets are required

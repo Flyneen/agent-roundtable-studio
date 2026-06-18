@@ -4,12 +4,13 @@
 
 ## 1. 部署结论
 
-首期 Web 版本采用容器化部署：
+首期 Web 版本采用容器化微服务部署：
 
-- 应用服务：单个 `agent-roundtable-studio` 容器，同时提供前端静态页面、`/api/*` 和 `/health`。
+- 对外入口：`gateway-nginx-8181` 继续作为统一公网入口，路径为 `/agent-roundtable-studio/`。
+- Java API 服务：`agent-roundtable-studio` 容器，对外提供静态页面、`/api/*` 和 `/health`。
+- Python AI Orchestrator：`ai-orchestrator-python` 容器，负责任务画像、Agent 编排、圆桌生成和模型供应商调用。
 - 持久化数据：挂载到 `/opt/agent-roundtable-studio/data`，容器内路径为 `/data`。
-- 公网入口：复用已有 `gateway-nginx-8181`，路径为 `/agent-roundtable-studio/`。
-- 端口策略：不新增公网白名单端口，应用容器不直接映射公网端口。
+- 端口策略：不新增公网白名单端口，Java 和 Python 容器都不直接暴露公网端口。
 
 访问地址：
 
@@ -26,7 +27,7 @@ http://113.44.223.11:8181/agent-roundtable-studio/
 5. 华为云安全组仅开放必要端口：
    - `22/tcp`：SSH，建议仅允许可信 IP。
    - `8181/tcp`：统一网关入口。
-6. 应用容器只加入内部 Docker 网络，不直接暴露公网端口。
+6. Java 和 Python 容器只加入内部 Docker 网络，不直接暴露公网端口。
 
 ## 3. 目录结构
 
@@ -34,7 +35,8 @@ http://113.44.223.11:8181/agent-roundtable-studio/
 /opt/agent-roundtable-studio
   repo/
     app/
-      backend/
+      backend-java/
+      ai-orchestrator-python/
       frontend/
       deploy/
   data/
@@ -56,40 +58,23 @@ APP_ENV=production
 BACKEND_HOST=0.0.0.0
 BACKEND_PORT=8787
 APP_BASE_PATH=/agent-roundtable-studio
+STATIC_ROOT=/app/frontend/dist
+AI_ORCHESTRATOR_URL=http://ai-orchestrator-python:8790
+AI_ORCHESTRATOR_TIMEOUT_MS=90000
+ORCHESTRATOR_HOST=0.0.0.0
+ORCHESTRATOR_PORT=8790
 DATA_DIR=/data
-AI_RUNTIME=simulated
-OPENAI_BASE_URL=https://api.openai.com/v1
-OPENAI_API_MODE=responses
+AI_RUNTIME=openai
+OPENAI_BASE_URL=https://dashscope.aliyuncs.com/compatible-mode/v1
+OPENAI_API_MODE=chat_completions
 OPENAI_API_KEY=
-OPENAI_MODEL=gpt-4.1-mini
-OPENAI_TIMEOUT_MS=30000
-OPENAI_MAX_RETRIES=2
+OPENAI_MODEL=qwen-plus
+OPENAI_TIMEOUT_MS=45000
+OPENAI_MAX_RETRIES=1
 ALLOWED_ORIGINS=http://127.0.0.1:5173,http://localhost:5173,http://113.44.223.11:8181,https://113.44.223.11:8181
 ```
 
 真实 `OPENAI_API_KEY` 只能存在服务器环境或 secret 文件中，不能提交到 GitHub。
-
-如果接入阿里或其他 OpenAI-compatible 服务，服务器环境变量改为：
-
-```text
-AI_RUNTIME=openai
-OPENAI_BASE_URL=<第三方 OpenAI-compatible base url>
-OPENAI_API_MODE=chat_completions
-OPENAI_API_KEY=<只写在服务器环境或 secret 中>
-OPENAI_MODEL=<第三方模型名称>
-```
-
-阿里云百炼 DashScope 兼容 OpenAI 的北京地域示例：
-
-```text
-AI_RUNTIME=openai
-OPENAI_BASE_URL=https://dashscope.aliyuncs.com/compatible-mode/v1
-OPENAI_API_MODE=chat_completions
-OPENAI_API_KEY=<只写在服务器环境或 secret 中>
-OPENAI_MODEL=qwen-plus
-```
-
-不要把真实 Key 写入仓库、前端或文档。已经暴露过的 Key 必须在供应商侧作废后重新生成。
 
 ## 5. Docker Compose
 
@@ -99,22 +84,17 @@ Compose 文件位于：
 app/deploy/docker-compose.yml
 ```
 
-部署后会创建容器：
+部署后会创建两个主容器：
 
 ```text
 agent-roundtable-studio
+ai-orchestrator-python
 ```
 
-容器加入外部网络：
+二者加入同一个内部网络，Java 服务通过容器名访问 Python 服务：
 
 ```text
-1panel-network
-```
-
-如果 `gateway-nginx-8181` 不在该网络中，部署脚本会把网关容器连接到该网络，使 Nginx 可以通过容器名访问：
-
-```text
-http://agent-roundtable-studio:8787
+http://ai-orchestrator-python:8790
 ```
 
 ## 6. 8181 网关分发
@@ -145,44 +125,31 @@ location /agent-roundtable-studio/ {
 }
 ```
 
-完整片段包含必要的 `X-Forwarded-*` 头和 `proxy_redirect off`，以文件内容为准。
-
 ## 7. 自动化部署
 
 仓库提供以下脚本：
 
-- `deploy/scripts/deploy-container.sh`：从 GitHub 拉取代码、构建镜像、运行容器、检查容器健康、reload 8181 网关。
-- `deploy/scripts/deploy-from-github.sh`：兼容入口，当前会转到容器化部署脚本。
+- `deploy/scripts/deploy-container.sh`：拉取代码、构建前端、编译 Java、校验 Python、启动两个容器、检查健康、reload 8181 网关。
 - `deploy/scripts/remote-smoke.sh`：对已部署站点执行线上烟测。
 
 首次部署：
 
 ```bash
-cd /tmp
-git clone https://github.com/Flyneen/agent-roundtable-studio.git
-cd agent-roundtable-studio/app
-bash deploy/scripts/deploy-container.sh
-BASE_URL=http://113.44.223.11:8181/agent-roundtable-studio bash deploy/scripts/remote-smoke.sh
-```
-
-后续更新：
-
-```bash
 cd /opt/agent-roundtable-studio/repo/app
-git pull --ff-only origin main
 bash deploy/scripts/deploy-container.sh
 BASE_URL=http://113.44.223.11:8181/agent-roundtable-studio bash deploy/scripts/remote-smoke.sh
 ```
 
 ## 8. 发布检查
 
-- `docker ps` 中存在 `agent-roundtable-studio`，状态为 running。
-- `docker exec agent-roundtable-studio node --input-type=module -e "const r = await fetch('http://127.0.0.1:8787/health'); if (!r.ok) process.exit(1);"` 通过。
+- `docker ps` 中存在 `agent-roundtable-studio` 和 `ai-orchestrator-python`，状态为 running。
+- `docker exec agent-roundtable-studio curl -fsS http://127.0.0.1:8787/health` 通过。
+- `docker exec ai-orchestrator-python python -m py_compile /app/ai-orchestrator-python/src/orchestrator.py` 通过。
 - `docker exec gateway-nginx-8181 nginx -t` 通过。
-- `docker exec gateway-nginx-8181 nginx -T 2>/dev/null | grep 'agent-roundtable-studio:8787'` 能看到 `/agent-roundtable-studio` 实际转发到应用容器。
+- `docker exec gateway-nginx-8181 nginx -T 2>/dev/null | grep 'agent-roundtable-studio:8787'` 能看到 `/agent-roundtable-studio` 实际转发到 Java API 服务。
 - `BASE_URL=http://113.44.223.11:8181/agent-roundtable-studio bash deploy/scripts/remote-smoke.sh` 通过。
 - `http://113.44.223.11:8181/` 原有服务仍可访问，不能被本应用覆盖。
 
 ## 9. 旧部署方式
 
-旧的宿主机 systemd + 宿主机 Nginx `18080/443` 方式仅保留为历史参考，不再作为首期推荐上线方式。当前上线以 Docker Compose + `8181` 网关为准。
+旧的宿主机 systemd + 宿主机 Nginx 方式仅保留为历史参考，不再作为首期推荐上线方式。当前上线以 Docker Compose + `8181` 网关为准。

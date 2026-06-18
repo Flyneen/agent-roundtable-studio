@@ -5,9 +5,12 @@
   "type": "module",
   "scripts": {
     "start:backend": "node backend/src/server.mjs",
+    "start:orchestrator": "python ai-orchestrator-python/src/orchestrator.py",
+    "build:java": "powershell -ExecutionPolicy Bypass -File backend-java/build.ps1",
     "start:frontend": "node frontend/server.mjs",
     "build": "node frontend/scripts/build.mjs",
-    "test": "npm run build && node backend/test/smoke.mjs && node backend/test/openai-compatible-smoke.mjs",
+    "test": "npm run build && python -m py_compile ai-orchestrator-python/src/orchestrator.py ai-orchestrator-python/test/openai_compatible_smoke.py && node backend-java/test/microservice-smoke.mjs && python ai-orchestrator-python/test/openai_compatible_smoke.py",
+    "test:legacy-node": "npm run build && node backend/test/smoke.mjs && node backend/test/openai-compatible-smoke.mjs",
     "test:ui": "node frontend/test/ui-flow.mjs",
     "validate:openspec": "openspec validate web-mvp-frontend-backend --strict --no-interactive"
   },

@@ -17,17 +17,21 @@ try {
   await page.goto(`${baseUrl}/`, { waitUntil: "networkidle" });
   await expectVisibleText(page, "让系统自动组建圆桌");
   await expectVisibleText(page, "Runtime:");
+  await expectVisibleText(page, "java-api-gateway-python-ai-orchestrator");
 
-  await page.fill("textarea[name='problem']", "真实用户流程验收：医疗健康产品上线评审，使用者不知道需要哪些智能体，系统必须自动组建圆桌并补齐合规、行业专家和财务审计视角。");
-  await page.fill("textarea[name='background']", "这是从公网 Web 页面发起的真实用户路径，不直接调用 API。需要看到任务画像、系统组建过程、覆盖检查、结构化圆桌事件和最终报告。");
-  await page.fill("input[name='targetOutput']", "真实用户流程验收报告");
+  await page.fill("textarea[name='problem']", "真实用户流程验收：如何将 AI 赋能到英语教学当中，尤其是硬件条件比较弱的初中学校？");
+  await page.fill("textarea[name='background']", "初中、英语、论文；系统必须自动判断需要哪些智能体，补齐教学设计、学习评估、学校落地和隐私边界。");
+  await page.fill("input[name='targetOutput']", "教育场景圆桌报告");
   await page.click("button[type='submit']");
 
   await page.waitForSelector("#taskProfile:not(.empty)", { timeout: 15000 });
   await expectVisibleText(page, "系统组建圆桌");
-  await expectVisibleText(page, "识别问题所需视角");
+  await expectVisibleText(page, "真实分析任务画像");
+  await expectVisibleText(page, "教学设计");
+  await expectVisibleText(page, "学习评估");
   await expectVisibleText(page, "覆盖检查");
   await expectVisibleText(page, "匹配已有");
+  await expectVisibleText(page, "运行证据");
   await page.waitForSelector("#runButton:not(.hidden)", { timeout: 15000 });
   await page.screenshot({ path: path.join(screenshotDir, "ui-flow-01-assembly.png"), fullPage: true });
 
@@ -40,7 +44,7 @@ try {
   await page.click("[data-view='output']");
   await page.waitForSelector("#report:not(.empty)", { timeout: 15000 });
   await expectVisibleText(page, "圆桌评审报告");
-  await expectVisibleText(page, "主要质疑");
+  await expectVisiblePattern(page, /主要质疑|关键质疑/);
   await expectVisibleText(page, "事件索引");
   await page.waitForSelector("#exportButton:not(.hidden)", { timeout: 15000 });
   await page.screenshot({ path: path.join(screenshotDir, "ui-flow-03-report.png"), fullPage: true });
@@ -60,5 +64,10 @@ async function importPlaywright() {
 
 async function expectVisibleText(page, text) {
   const locator = page.getByText(text, { exact: false }).first();
+  await locator.waitFor({ state: "visible", timeout: 15000 });
+}
+
+async function expectVisiblePattern(page, pattern) {
+  const locator = page.getByText(pattern).first();
   await locator.waitFor({ state: "visible", timeout: 15000 });
 }

@@ -2,7 +2,9 @@ node_modules
 backend/data
 backend/data-test
 backend/data-openai-compatible-test
-frontend/dist
+backend-java/build
+backend-java/test-data
+ai-orchestrator-python/data
 frontend/test-output
 data
 logs

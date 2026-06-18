@@ -11,7 +11,7 @@ export class OpenAIAdapter {
 
   async createStructuredResponse({ instructions, input, schemaName }) {
     if (!this.isConfigured()) {
-      const error = new Error("OpenAI API key is not configured. Use AI_RUNTIME=simulated or set OPENAI_API_KEY.");
+      const error = new Error("OpenAI API key is not configured. Use a development-degraded runtime or set OPENAI_API_KEY.");
       error.status = 503;
       error.code = "openai_not_configured";
       throw error;

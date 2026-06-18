@@ -1,3 +1,7 @@
+# Legacy Node prototype image.
+# Production deployment now uses backend-java/Dockerfile and
+# ai-orchestrator-python/Dockerfile through deploy/docker-compose.yml.
+
 FROM node:22-alpine AS build
 
 WORKDIR /app
@@ -17,7 +21,7 @@ ENV APP_ENV=production \
     BACKEND_PORT=8787 \
     APP_BASE_PATH=/agent-roundtable-studio \
     DATA_DIR=/data \
-    AI_RUNTIME=simulated
+    AI_RUNTIME=dev
 
 COPY package.json ./
 COPY backend ./backend

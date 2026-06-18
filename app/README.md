@@ -1,47 +1,45 @@
-# Agent Roundtable Studio Web MVP
+# Agent Roundtable Studio Web
 
-首期 Web 版采用前后端分离的代码结构，部署时收敛为单容器服务：
+首期 Web 版已从 Node 单体原型调整为 Java + Python 微服务容器化架构：
 
-- `backend/`：Node 原生 HTTP API，负责任务画像、Agent 匹配、圆桌编排、结构化事件、报告生成。
-- `frontend/`：静态 Web 前端，负责问题工作台、Agent 推荐、圆桌现场、Agent 库、输出中心。
-- `deploy/`：Docker Compose、华为云部署脚本和 `8181` 网关分发配置。
+- `backend-java/`：Java API Gateway，对外提供静态页面、`/api/*`、`/health`，并保持 8181 网关路径兼容。
+- `ai-orchestrator-python/`：Python AI Orchestrator，负责任务画像、Agent 选择、个人 Agent 自动补位、结构化圆桌、报告生成和 OpenAI-compatible 模型调用。
+- `frontend/`：静态 Web 前端，展示问题工作台、任务画像、Agent 组建过程、运行证据、圆桌事件和报告。
+- `backend/`：旧 Node 原型，仅保留作历史参考，不再作为主后端路径。
+- `deploy/`：Docker Compose、华为云部署脚本和 8181 网关配置。
 
-当前默认使用模拟 AI Runtime，保证不配置 OpenAI API Key 也能端到端验证。
+生产路径不再把 `simulated` 当主运行时。未配置真实 API Key 时，Python Orchestrator 会明确标记为 `dev_degraded_missing_key` 或 `dev`，用于联调，不作为生产质量验收。
 
 ## 本地运行
 
-开发模式可以分别启动后端和前端：
-
-```powershell
-cd D:\AI\AIchat\outputs\agent-roundtable-studio-open-spec\app
-node backend/src/server.mjs
-```
-
-另开一个终端：
-
-```powershell
-cd D:\AI\AIchat\outputs\agent-roundtable-studio-open-spec\app
-node frontend/server.mjs
-```
-
-访问：
-
-```text
-http://127.0.0.1:5173
-```
-
-后端健康检查：
-
-```text
-http://127.0.0.1:8787/health
-```
-
-单服务模式可以先构建前端，再由后端同时提供页面、API 和健康检查：
+构建前端：
 
 ```powershell
 cd D:\AI\AIchat\outputs\agent-roundtable-studio-open-spec\app
 npm run build
-node backend/src/server.mjs
+```
+
+启动 Python AI Orchestrator：
+
+```powershell
+$env:AI_RUNTIME="dev"
+$env:ORCHESTRATOR_HOST="127.0.0.1"
+$env:ORCHESTRATOR_PORT="8790"
+$env:DATA_DIR="./ai-orchestrator-python/data"
+python ai-orchestrator-python/src/orchestrator.py
+```
+
+另开终端启动 Java API Gateway：
+
+```powershell
+cd D:\AI\AIchat\outputs\agent-roundtable-studio-open-spec\app
+.\backend-java\build.ps1
+$env:BACKEND_HOST="127.0.0.1"
+$env:BACKEND_PORT="8787"
+$env:APP_BASE_PATH=""
+$env:STATIC_ROOT="./frontend/dist"
+$env:AI_ORCHESTRATOR_URL="http://127.0.0.1:8790"
+java -cp backend-java/build/classes com.ars.AgentRoundtableGateway
 ```
 
 访问：
@@ -50,15 +48,33 @@ node backend/src/server.mjs
 http://127.0.0.1:8787/
 ```
 
-## 验证
+## 真实模型运行
 
-```powershell
-npm test
-npm run build
-npm run validate:openspec
+不要使用已暴露过的 Key。重新生成供应商 Key 后，只写入服务器环境变量或 secret 文件。
+
+阿里 DashScope OpenAI-compatible 示例：
+
+```text
+AI_RUNTIME=openai
+OPENAI_BASE_URL=https://dashscope.aliyuncs.com/compatible-mode/v1
+OPENAI_API_MODE=chat_completions
+OPENAI_API_KEY=<只写服务器环境>
+OPENAI_MODEL=qwen-plus
+OPENAI_TIMEOUT_MS=45000
+OPENAI_MAX_RETRIES=1
 ```
 
-真实公网 UI 流程验收：
+## 验证
+
+本地基础验证：
+
+```powershell
+npm run build
+python -m py_compile ai-orchestrator-python/src/orchestrator.py
+.\backend-java\build.ps1
+```
+
+真实 UI 验收：
 
 ```powershell
 npm install --no-save playwright
@@ -66,32 +82,13 @@ npx playwright install chromium
 $env:BASE_URL="http://113.44.223.11:8181/agent-roundtable-studio"; npm run test:ui
 ```
 
-该脚本会像普通用户一样在 Web 页面输入问题、让系统自动组建圆桌、启动结构化圆桌、查看输出中心报告，并在 `frontend/test-output/` 生成流程截图。
+远程烟测：
 
-## 环境变量
-
-复制 `.env.example` 为部署环境变量参考，不要把真实密钥写入仓库。
-
-首期默认：
-
-```text
-AI_RUNTIME=simulated
+```bash
+BASE_URL=http://113.44.223.11:8181/agent-roundtable-studio bash deploy/scripts/remote-smoke.sh
 ```
 
-接入真实模型时，后端必须只从服务端环境读取 `OPENAI_API_KEY`，前端不得接触密钥。
-
-## 华为云部署建议
-
-首期上线采用 Docker Compose + 现有 `8181` 网关，不新增公网端口白名单。
-
-部署前先处理安全：
-
-1. 更换已暴露的 root 密码。
-2. 创建非 root 部署用户。
-3. 配置 SSH Key 登录。
-4. 限制或禁用 root 密码登录。
-5. 安全组仅开放 SSH 和已有 `8181` 网关端口。
-6. 生产密钥使用服务器环境变量或独立 secret 文件，不提交到源码。
+## 华为云部署
 
 部署形态：
 
@@ -100,12 +97,10 @@ gateway-nginx-8181
   /agent-roundtable-studio/        -> agent-roundtable-studio:8787/
   /agent-roundtable-studio/api/    -> agent-roundtable-studio:8787/api/
   /agent-roundtable-studio/health  -> agent-roundtable-studio:8787/health
-```
 
-应用容器不直接映射公网端口，数据挂载到：
-
-```text
-/opt/agent-roundtable-studio/data
+agent-roundtable-studio            -> Java API Gateway
+ai-orchestrator-python             -> Python AI Orchestrator
+/opt/agent-roundtable-studio/data  -> 持久化数据
 ```
 
 部署脚本：
@@ -114,10 +109,4 @@ gateway-nginx-8181
 cd /opt/agent-roundtable-studio/repo/app
 bash deploy/scripts/deploy-container.sh
 BASE_URL=http://113.44.223.11:8181/agent-roundtable-studio bash deploy/scripts/remote-smoke.sh
-```
-
-完整说明见：
-
-```text
-deploy/huawei-cloud.md
 ```

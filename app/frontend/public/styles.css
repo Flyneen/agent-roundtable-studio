@@ -334,7 +334,8 @@ textarea:focus {
   background: #fff8ea;
 }
 
-.assembly-step[data-status="fallback_simulated"] {
+.assembly-step[data-status^="fallback"],
+.assembly-step[data-status^="dev_degraded"] {
   border-color: rgba(178, 77, 62, 0.28);
   background: #fff7f2;
 }
@@ -354,6 +355,12 @@ textarea:focus {
 .autofill-note {
   margin-top: 12px;
   background: #f5fbf7;
+}
+
+.runtime-evidence {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px dashed rgba(22, 72, 63, 0.15);
 }
 
 .agent-card,

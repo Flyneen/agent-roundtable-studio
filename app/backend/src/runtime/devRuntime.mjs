@@ -239,7 +239,7 @@ export function createPersonalAgentDraft(requestText, agents, store) {
 }
 
 export function runRoundtable(session, store) {
-  if (session.problem.includes("[partial]") || session.problem.includes("模拟失败")) {
+  if (session.problem.includes("[partial]") || session.problem.includes("开发降级失败")) {
     return runPartialRoundtable(session, store);
   }
 
@@ -290,7 +290,7 @@ export function runRoundtable(session, store) {
     const reviser = agents.find((agent) => agent.agent_id === firstPosition?.agent_id) || agents[0];
     events.push(makeEvent(store, session, reviser, "revision", {
       original_position_id: firstPosition?.event_id,
-      revised_claim: "首期应以模拟 Runtime 跑通结构化圆桌闭环，再接入 OpenAI API；不要先做头像聊天 UI。",
+      revised_claim: "首期应以真实 API Runtime 为产品主路径；开发降级 Runtime 只能用于本地联调和故障标记，不能替代线上智能。",
       revision_reason: "交叉质疑后明确证据链和部署安全比视觉演示更重要。",
       impact_level: "high"
     }));
@@ -339,7 +339,7 @@ function runPartialRoundtable(session, store) {
     current_version_id: "system:v1"
   };
   const partialEvent = makeEvent(store, session, actor, "partial_failure", {
-    failure_type: "simulated_runtime_failure",
+    failure_type: "dev_runtime_failure",
     failed_stage: "challenges",
     reason: "样例任务触发 partial 验收路径，系统保留已生成事件并标记为 partial。",
     recoverable: true,
@@ -434,8 +434,8 @@ ${gaps.map((event) => `- ${event.payload.missing_evidence}：${event.payload.ris
 
 ## 下一步行动
 
-1. 先用模拟 Runtime 完成本地端到端验证。
-2. 接入 OpenAI API Adapter，并强制结构化输出。
+1. 使用 OpenAI-compatible API 完成真实端到端验证。
+2. 保留开发降级 Runtime 仅用于本地联调和故障恢复标记。
 3. 部署前完成服务器安全基线处理。
 4. 用 3 个样例任务验证报告质量和追溯链。
 

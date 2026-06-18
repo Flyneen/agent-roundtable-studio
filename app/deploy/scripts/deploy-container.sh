@@ -68,17 +68,7 @@ if [[ ! -f "${APP_DIR}/env/backend.env" ]]; then
   chmod 600 "${APP_DIR}/env/backend.env"
 fi
 
-pushd "${APP_DIR}/repo/app" >/dev/null
-docker build "${DOCKER_BUILD_FLAGS[@]}" --target build -t agent-roundtable-studio:build-check .
-docker run --rm \
-  -e BACKEND_HOST=0.0.0.0 \
-  -e BACKEND_PORT=8877 \
-  -e DATA_DIR=./backend/data-test \
-  -e AI_RUNTIME=simulated \
-  agent-roundtable-studio:build-check npm test
-popd >/dev/null
-
-docker network inspect "${DOCKER_NETWORK}" >/dev/null
+docker network inspect "${DOCKER_NETWORK}" >/dev/null 2>&1 || docker network create "${DOCKER_NETWORK}" >/dev/null
 
 if gateway_running; then
   if ! docker inspect "${GATEWAY_CONTAINER}" --format '{{json .NetworkSettings.Networks}}' | grep -q "\"${DOCKER_NETWORK}\""; then
@@ -87,15 +77,16 @@ if gateway_running; then
 fi
 
 pushd "${APP_DIR}/repo/app/deploy" >/dev/null
+export DOCKER_NETWORK
 if [[ "${#COMPOSE_BUILD_FLAGS[@]}" -gt 0 ]]; then
-  compose -f docker-compose.yml build "${COMPOSE_BUILD_FLAGS[@]}" agent-roundtable-studio
-  compose -f docker-compose.yml up -d --force-recreate agent-roundtable-studio
+  compose -f docker-compose.yml build "${COMPOSE_BUILD_FLAGS[@]}" ai-orchestrator-python agent-roundtable-studio
+  compose -f docker-compose.yml up -d --force-recreate ai-orchestrator-python agent-roundtable-studio
 else
   compose -f docker-compose.yml up -d --build
 fi
 popd >/dev/null
 
-docker exec agent-roundtable-studio node --input-type=module -e "const res = await fetch('http://127.0.0.1:8787/health'); if (!res.ok) process.exit(1);"
+docker exec agent-roundtable-studio wget -qO- http://127.0.0.1:8787/health >/dev/null
 
 if [[ -f "${GATEWAY_CONF}" ]]; then
   backup="${GATEWAY_CONF}.bak.$(date +%Y%m%d%H%M%S)"

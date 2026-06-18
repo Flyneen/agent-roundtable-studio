@@ -224,33 +224,35 @@ The cloud product runtime SHALL use OpenAI API for model execution and SHALL NOT
 - **THEN** the request goes through the product's policy gateway, tool gateway, and evidence gateway rather than direct model access
 
 ### Requirement: First Web Release Scope
-The system SHALL deliver the first release as a Web application with separated frontend and backend components.
+The system SHALL deliver the first release as a Web application with a separated frontend, Java API Gateway, and Python AI Orchestrator.
 
 #### Scenario: Release scope is evaluated
 - **WHEN** the first release is evaluated
-- **THEN** browser-based access, frontend/backend separation, backend API, structured roundtable orchestration, and deployability are required
+- **THEN** browser-based access, Java API Gateway, Python AI Orchestrator, structured roundtable orchestration, and deployability are required
 
 #### Scenario: Non-Web platform is requested
 - **WHEN** desktop or mobile app support is requested during the first release
 - **THEN** it is recorded as a future option and does not block the Web MVP
 
 ### Requirement: Containerized Huawei Cloud Deployment
-The system SHALL deploy the first Web release as a containerized service behind the existing `8181` gateway.
+The system SHALL deploy the first Web release as containerized Java and Python microservices behind the existing `8181` gateway.
 
 #### Scenario: Application is deployed on Huawei Cloud
 - **WHEN** the first Web release is deployed
-- **THEN** the application runs as a Docker container that serves the frontend static files, backend API, and health endpoint from one internal service
-- **AND** the container persists data through a mounted server-side volume
+- **THEN** `agent-roundtable-studio` runs as the Java API Gateway serving frontend static files, `/api/*`, and `/health`
+- **AND** `ai-orchestrator-python` runs as the internal Python AI Orchestrator for task profiling, agent assembly, roundtable execution, and report synthesis
+- **AND** persistent workflow data is stored through a mounted server-side volume
 
 #### Scenario: Existing gateway is reused
 - **WHEN** public access is configured
-- **THEN** the existing `gateway-nginx-8181` routes `/agent-roundtable-studio/` to the application container
+- **THEN** the existing `gateway-nginx-8181` routes `/agent-roundtable-studio/` to the Java API Gateway container
 - **AND** the deployment does not require a new public port whitelist
 
 #### Scenario: Application container is isolated
 - **WHEN** the service is running
-- **THEN** the application container is reachable by the gateway over the internal Docker network
-- **AND** the application container does not expose backend ports directly to the public internet
+- **THEN** the Java API Gateway is reachable by the gateway over the internal Docker network
+- **AND** the Python AI Orchestrator is reachable only from internal services
+- **AND** neither service exposes backend ports directly to the public internet
 
 ### Requirement: Codex Development Role
 The system SHALL treat Codex as a development tool rather than product runtime.

@@ -36,9 +36,9 @@ async function get(path) {
 }
 
 const created = await post("/api/sessions", {
-  problem: "线上烟测：医疗健康产品上线评审，使用者不知道需要哪些智能体，系统必须自动组建圆桌并补齐合规和行业专家。",
-  background: "使用 simulated runtime，不依赖真实模型 Key；验收自动组建过程、结构化事件和最终报告。",
-  targetOutput: "线上真实流程烟测报告"
+  problem: "线上烟测：如何让 AI 赋能英语教学真正落地到学校场景，而不是停留在演示页？",
+  background: "需要系统自动判断所需智能体，补齐教学设计、学习评估、学校落地和隐私边界视角，并展示真实质疑过程。",
+  targetOutput: "教育场景圆桌报告"
 });
 if (!created.session?.recommendation?.assembly_trace?.length) {
   throw new Error("Assembly trace missing from recommendation.");
@@ -46,11 +46,14 @@ if (!created.session?.recommendation?.assembly_trace?.length) {
 if (!created.session?.agent_panel?.every((agent) => agent.selection_source)) {
   throw new Error("Agent selection source missing.");
 }
-if (!created.session?.task_profile?.required_perspectives?.includes("合规")) {
-  throw new Error("Compliance perspective was not detected.");
+if (!created.session?.task_profile?.required_perspectives?.some((item) => item.includes("教育"))) {
+  throw new Error("Education perspective was not detected.");
 }
-if (!created.session?.task_profile?.required_perspectives?.includes("行业专家")) {
-  throw new Error("Industry expert perspective was not detected.");
+if (!created.session?.task_profile?.required_perspectives?.includes("教学设计")) {
+  throw new Error("Instructional design perspective was not detected.");
+}
+if (!created.session?.task_profile?.required_perspectives?.includes("学习评估")) {
+  throw new Error("Learning assessment perspective was not detected.");
 }
 
 const result = await post(`/api/sessions/${created.session.session_id}/run`);
@@ -66,7 +69,7 @@ if (!result.events?.some((event) => event.event_type === "consensus")) {
 if (!result.artifact?.markdown?.includes("圆桌评审报告")) {
   throw new Error("Final report markdown missing.");
 }
-if (!result.artifact.markdown.includes("主要质疑")) {
+if (!/主要质疑|关键质疑/.test(result.artifact.markdown)) {
   throw new Error("Final report does not include challenge section.");
 }
 
