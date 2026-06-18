@@ -101,3 +101,30 @@ WantedBy=multi-user.target
 - 浏览器访问前端。
 - 检查 `/health`。
 - 完成一次问题输入到报告生成的端到端流程。
+
+## 7. 自动化部署脚本
+
+仓库提供以下脚本，均不包含真实密码或密钥：
+
+- `deploy/scripts/prepare-server.sh`：初始化服务器运行环境、创建部署用户、安装 Node.js、Git、Nginx。
+- `deploy/scripts/deploy-from-github.sh`：从 GitHub 拉取代码、执行测试和构建、安装 systemd 与 Nginx 配置、重启服务。
+- `deploy/scripts/remote-smoke.sh`：对已部署站点执行线上烟测。
+
+首次部署建议流程：
+
+```bash
+cd /tmp
+git clone https://github.com/Flyneen/agent-roundtable-studio.git
+cd agent-roundtable-studio/app
+bash deploy/scripts/prepare-server.sh
+bash deploy/scripts/deploy-from-github.sh
+BASE_URL=http://113.44.223.11 bash deploy/scripts/remote-smoke.sh
+```
+
+如果未来切换真实模型，在服务器上编辑：
+
+```bash
+/opt/agent-roundtable-studio/env/backend.env
+```
+
+只在服务器环境文件中填写 `OPENAI_API_KEY`，不要提交到 GitHub。

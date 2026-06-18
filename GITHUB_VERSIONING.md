@@ -42,6 +42,21 @@ npm run validate:openspec
 git status --short
 ```
 
+## 部署前检查
+
+```powershell
+openspec validate --all --strict --no-interactive
+npm test
+npm run build
+git diff --check
+```
+
+部署完成后运行远程烟测：
+
+```bash
+BASE_URL=http://113.44.223.11 bash /opt/agent-roundtable-studio/app/deploy/scripts/remote-smoke.sh
+```
+
 ## GitHub 远程仓库创建方式
 
 方式一：网页创建。

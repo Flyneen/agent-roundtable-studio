@@ -1,0 +1,15 @@
+[Unit]
+Description=Agent Roundtable Studio Backend
+After=network.target
+
+[Service]
+Type=simple
+User=arsdeploy
+WorkingDirectory=/opt/agent-roundtable-studio/app
+EnvironmentFile=/opt/agent-roundtable-studio/env/backend.env
+ExecStart=/usr/bin/node backend/src/server.mjs
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
