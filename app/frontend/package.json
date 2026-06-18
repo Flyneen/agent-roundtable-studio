@@ -1,0 +1,13 @@
+{
+  "name": "agent-roundtable-studio-frontend",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node server.mjs",
+    "build": "node scripts/build.mjs"
+  },
+  "engines": {
+    "node": ">=20.19.0"
+  }
+}

@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Agent Roundtable Studio</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="shell">
+      <aside class="sidebar">
+        <div class="brand">
+          <span class="brand-mark">ARS</span>
+          <div>
+            <strong>Agent Roundtable</strong>
+            <small>结构化问题审议工作台</small>
+          </div>
+        </div>
+        <nav class="nav">
+          <button class="nav-item active" data-view="workspace">问题工作台</button>
+          <button class="nav-item" data-view="agents">Agent 库</button>
+          <button class="nav-item" data-view="roundtable">圆桌现场</button>
+          <button class="nav-item" data-view="output">输出中心</button>
+        </nav>
+        <div class="status-card">
+          <span class="status-dot"></span>
+          <div>
+            <strong id="runtimeLabel">Runtime</strong>
+            <small id="apiBaseLabel">连接中</small>
+          </div>
+        </div>
+      </aside>
+
+      <main class="main">
+        <section class="hero">
+          <div>
+            <p class="eyebrow">Web MVP / 前后端分离</p>
+            <h1>先把复杂问题变成可审议的圆桌，而不是多 Agent 群聊。</h1>
+          </div>
+          <button id="healthButton" class="ghost-button">检查后端</button>
+        </section>
+
+        <section id="workspace" class="view active">
+          <div class="grid two">
+            <form id="taskForm" class="panel tall">
+              <div class="panel-head">
+                <span>01</span>
+                <h2>输入问题</h2>
+              </div>
+              <label>
+                问题
+                <textarea name="problem" required>首期 Web 版前后端分离开发并部署到华为云，如何保证圆桌讨论可追溯？</textarea>
+              </label>
+              <label>
+                背景
+                <textarea name="background">需要问题工作台、Agent 推荐、结构化圆桌、Agent 库和输出中心。云端版本未来给部门同事使用，但首期先做 Web MVP。</textarea>
+              </label>
+              <label>
+                输出目标
+                <input name="targetOutput" value="评审报告" />
+              </label>
+              <button class="primary-button" type="submit">生成任务画像并推荐 Agent</button>
+            </form>
+
+            <div class="panel">
+              <div class="panel-head">
+                <span>02</span>
+                <h2>任务画像</h2>
+              </div>
+              <div id="taskProfile" class="empty">提交问题后生成任务画像。</div>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-head">
+              <span>03</span>
+              <h2>推荐阵容</h2>
+            </div>
+            <div id="recommendations" class="agent-grid"></div>
+            <button id="runButton" class="primary-button hidden">启动结构化圆桌</button>
+          </div>
+        </section>
+
+        <section id="agents" class="view">
+          <div class="grid two">
+            <div class="panel">
+              <div class="panel-head">
+                <span>A</span>
+                <h2>Agent 库</h2>
+              </div>
+              <div class="filters">
+                <button data-agent-filter="" class="chip active">全部</button>
+                <button data-agent-filter="system_public" class="chip">基础公共</button>
+                <button data-agent-filter="personal_private" class="chip">个人</button>
+                <button data-agent-filter="shared_public" class="chip">共享</button>
+              </div>
+              <div id="agentList" class="agent-list"></div>
+            </div>
+
+            <form id="agentRequestForm" class="panel">
+              <div class="panel-head">
+                <span>B</span>
+                <h2>诉求驱动生成</h2>
+              </div>
+              <label>
+                你需要什么样的 Agent？
+                <textarea name="requestText">我需要一个医疗合规评审 Agent，检查健康数据、用户授权、宣传用语和隐私边界。</textarea>
+              </label>
+              <button class="primary-button" type="submit">先匹配，不足则生成个人 Agent</button>
+              <div id="agentRequestResult" class="result-box"></div>
+            </form>
+          </div>
+        </section>
+
+        <section id="roundtable" class="view">
+          <div class="panel">
+            <div class="panel-head">
+              <span>R</span>
+              <h2>圆桌现场</h2>
+            </div>
+            <div id="stageRail" class="stage-rail"></div>
+            <div id="events" class="event-list empty">启动圆桌后显示结构化事件。</div>
+          </div>
+        </section>
+
+        <section id="output" class="view">
+          <div class="panel">
+            <div class="panel-head">
+              <span>O</span>
+              <h2>输出中心</h2>
+            </div>
+            <div class="output-actions">
+              <button id="exportButton" class="ghost-button hidden">导出 JSON</button>
+            </div>
+            <article id="report" class="report empty">完成圆桌后生成报告。</article>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <div id="toast" class="toast hidden"></div>
+    <script src="./app.js" type="module"></script>
+  </body>
+</html>

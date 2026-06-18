@@ -1,0 +1,57 @@
+# Dependencies
+node_modules/
+.pnp/
+.pnp.*
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+*.crt
+*.csr
+secrets/
+secret/
+
+# Runtime data
+app/backend/data/
+app/backend/data-test/
+app/data/
+data/
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Build output
+app/frontend/dist/
+dist/
+build/
+coverage/
+
+# OS and editor
+.DS_Store
+Thumbs.db
+desktop.ini
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.bak
+
+# Local deployment artifacts
+deploy/*.env
+deploy/*.local
+*.tar
+*.tar.gz
+*.zip

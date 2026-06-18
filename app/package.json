@@ -1,0 +1,16 @@
+{
+  "name": "agent-roundtable-studio-web-mvp",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start:backend": "node backend/src/server.mjs",
+    "start:frontend": "node frontend/server.mjs",
+    "build": "node frontend/scripts/build.mjs",
+    "test": "node backend/test/smoke.mjs",
+    "validate:openspec": "openspec validate web-mvp-frontend-backend --strict --no-interactive"
+  },
+  "engines": {
+    "node": ">=20.19.0"
+  }
+}

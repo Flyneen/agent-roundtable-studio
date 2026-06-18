@@ -1,0 +1,25 @@
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const appRoot = path.resolve(__dirname, "..", "..");
+
+export function loadConfig(overrides = {}) {
+  const env = { ...process.env, ...overrides };
+  const dataDir = path.resolve(appRoot, env.DATA_DIR || "./backend/data");
+
+  return {
+    appEnv: env.APP_ENV || "development",
+    host: env.BACKEND_HOST || "127.0.0.1",
+    port: Number(env.BACKEND_PORT || 8787),
+    dataDir,
+    storeFile: path.join(dataDir, "store.json"),
+    aiRuntime: env.AI_RUNTIME || "simulated",
+    openaiApiKey: env.OPENAI_API_KEY || "",
+    openaiModel: env.OPENAI_MODEL || "gpt-4.1-mini",
+    allowedOrigins: (env.ALLOWED_ORIGINS || "http://127.0.0.1:5173,http://localhost:5173")
+      .split(",")
+      .map((item) => item.trim())
+      .filter(Boolean)
+  };
+}
