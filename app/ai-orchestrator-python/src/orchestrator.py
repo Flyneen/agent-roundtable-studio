@@ -585,7 +585,7 @@ def recommend_agents(profile, store, client):
         "generated_agents": [
             {
                 "mode": "created_personal_draft",
-                "perspective": agent["generated_for_perspective"],
+                "perspective": agent.get("generated_for_perspective") or first_covered_perspective(agent, profile),
                 "agent_id": agent["agent_id"],
                 "display_name": agent["display_name"],
                 "agent_class": agent["agent_class"],
@@ -693,6 +693,13 @@ def covers(agent, perspective):
     }
     terms = [perspective] + synonyms.get(perspective, []) + tokenize(perspective)
     return any(term and term.lower() in text for term in terms)
+
+
+def first_covered_perspective(agent, profile):
+    for perspective in profile.get("required_perspectives", []):
+        if covers(agent, perspective):
+            return perspective
+    return agent.get("generated_for_perspective") or "补位视角"
 
 
 def agent_text(agent):
