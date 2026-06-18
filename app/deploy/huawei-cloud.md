@@ -48,7 +48,7 @@ ALLOWED_ORIGINS=https://your-domain.example
 
 ```nginx
 server {
-    listen 80;
+    listen 18080;
     server_name _;
 
     root /opt/agent-roundtable-studio/app/frontend/dist;
@@ -110,6 +110,8 @@ WantedBy=multi-user.target
 - `deploy/scripts/deploy-from-github.sh`：从 GitHub 拉取代码、执行测试和构建、安装 systemd 与 Nginx 配置、重启服务。
 - `deploy/scripts/remote-smoke.sh`：对已部署站点执行线上烟测。
 
+当前服务器 `80/tcp` 已被既有 Docker Nginx 占用，为避免影响已有业务，首期独立监听 `18080/tcp`。如果后续要接入标准 HTTP/HTTPS，应在既有 80/443 网关中增加独立域名或路径转发，而不是直接停掉现有容器。
+
 首次部署建议流程：
 
 ```bash
@@ -118,7 +120,7 @@ git clone https://github.com/Flyneen/agent-roundtable-studio.git
 cd agent-roundtable-studio/app
 bash deploy/scripts/prepare-server.sh
 bash deploy/scripts/deploy-from-github.sh
-BASE_URL=http://113.44.223.11 bash deploy/scripts/remote-smoke.sh
+BASE_URL=http://113.44.223.11:18080 bash deploy/scripts/remote-smoke.sh
 ```
 
 如果未来切换真实模型，在服务器上编辑：

@@ -54,7 +54,7 @@ git diff --check
 部署完成后运行远程烟测：
 
 ```bash
-BASE_URL=http://113.44.223.11 bash /opt/agent-roundtable-studio/app/deploy/scripts/remote-smoke.sh
+BASE_URL=http://113.44.223.11:18080 bash /opt/agent-roundtable-studio/app/deploy/scripts/remote-smoke.sh
 ```
 
 ## GitHub 远程仓库创建方式

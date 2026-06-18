@@ -84,21 +84,21 @@
 
 ## 11. Huawei Cloud Deployment
 
-- [ ] 11.1 Create a non-root deployment user on the Huawei Cloud server.
-- [ ] 11.2 Configure SSH key login and disable or restrict root password login.
-- [ ] 11.3 Install required runtime dependencies on the server.
-- [ ] 11.4 Configure firewall/security group to expose only SSH, HTTP, and HTTPS as needed.
-- [ ] 11.5 Build and upload frontend assets.
-- [ ] 11.6 Deploy backend service with process manager or systemd.
-- [ ] 11.7 Configure Nginx to serve frontend and reverse proxy `/api` to backend.
+- [x] 11.1 Create a non-root deployment user on the Huawei Cloud server.
+- [x] 11.2 Configure SSH key login and disable or restrict root password login.
+- [x] 11.3 Install required runtime dependencies on the server.
+- [x] 11.4 Configure firewall/security group to expose only required deployment ports for the current IP-based preview.
+- [x] 11.5 Build and upload frontend assets.
+- [x] 11.6 Deploy backend service with process manager or systemd.
+- [x] 11.7 Configure Nginx to serve frontend and reverse proxy `/api` to backend.
 - [ ] 11.8 Configure HTTPS certificate.
-- [ ] 11.9 Configure environment variables for production without writing secrets into source control.
-- [ ] 11.10 Verify public access through the server IP or domain.
+- [x] 11.9 Configure environment variables for production without writing secrets into source control.
+- [x] 11.10 Verify public access through the server IP or domain.
 
 ## 12. Release Gate
 
 - [x] 12.1 Run backend tests and frontend build.
 - [x] 12.2 Run OpenSpec validation for all specs and changes.
-- [ ] 12.3 Run browser smoke test against deployed Web app.
-- [ ] 12.4 Confirm no secrets are committed or written into specs.
+- [x] 12.3 Run browser smoke test against deployed Web app.
+- [x] 12.4 Confirm no secrets are committed or written into specs.
 - [ ] 12.5 Archive the OpenSpec change after implementation is complete and verified.
