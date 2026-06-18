@@ -17,6 +17,8 @@ export function loadConfig(overrides = {}) {
     aiRuntime: env.AI_RUNTIME || "simulated",
     openaiApiKey: env.OPENAI_API_KEY || "",
     openaiModel: env.OPENAI_MODEL || "gpt-4.1-mini",
+    openaiTimeoutMs: Number(env.OPENAI_TIMEOUT_MS || 30000),
+    openaiMaxRetries: Number(env.OPENAI_MAX_RETRIES || 2),
     allowedOrigins: (env.ALLOWED_ORIGINS || "http://127.0.0.1:5173,http://localhost:5173")
       .split(",")
       .map((item) => item.trim())

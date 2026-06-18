@@ -18,7 +18,7 @@
 
 - [x] 3.1 Define database schema for agent profiles, agent versions, sessions, task profiles, trace events, evidence items, artifacts, and sharing records.
 - [x] 3.2 Implement repository layer so storage can move from SQLite to PostgreSQL without changing business logic.
-- [ ] 3.3 Add database migration mechanism.
+- [x] 3.3 Add database migration mechanism.
 - [x] 3.4 Add seed data for base public agents.
 - [x] 3.5 Add backup and restore notes for first deployment.
 
@@ -29,7 +29,7 @@
 - [x] 4.3 Implement request-driven agent matching against available agents.
 - [x] 4.4 Implement personal agent draft generation flow.
 - [x] 4.5 Implement personal agent trial status and approval state.
-- [ ] 4.6 Implement shared-agent state recording without full multi-user sharing in MVP-0.
+- [x] 4.6 Implement shared-agent state recording without full multi-user sharing in MVP-0.
 
 ## 5. Roundtable Runtime
 
@@ -46,7 +46,7 @@
 - [x] 6.2 Define JSON schemas for task profile, recommendation, position, challenge, response, revision, consensus, evidence gap, and final report.
 - [x] 6.3 Add runtime mode switch between simulated runtime and real OpenAI API runtime.
 - [x] 6.4 Ensure OpenAI API key is only read server-side and never sent to frontend.
-- [ ] 6.5 Add retry, timeout, and structured failure handling.
+- [x] 6.5 Add retry, timeout, and structured failure handling.
 
 ## 7. Frontend Foundation
 
@@ -70,16 +70,16 @@
 
 - [x] 9.1 Ensure frontend cannot access model API keys or raw server secrets.
 - [x] 9.2 Implement material access labels for agents.
-- [ ] 9.3 Implement policy gateway stub for file, network, database, and tool access.
+- [x] 9.3 Implement policy gateway stub for file, network, database, and tool access.
 - [x] 9.4 Implement sensitive data warning for shared agent publication.
 - [x] 9.5 Add server-side CORS and rate-limit defaults suitable for first deployment.
 
 ## 10. Local Verification
 
 - [x] 10.1 Add local end-to-end smoke flow using simulated runtime.
-- [ ] 10.2 Verify task profile to final report flow with at least 3 sample problems.
+- [x] 10.2 Verify task profile to final report flow with at least 3 sample problems.
 - [x] 10.3 Verify agent request creates personal agent draft when no existing agent matches.
-- [ ] 10.4 Verify incomplete roundtable is marked partial rather than complete.
+- [x] 10.4 Verify incomplete roundtable is marked partial rather than complete.
 - [x] 10.5 Verify final report links back to trace events.
 
 ## 11. Huawei Cloud Deployment

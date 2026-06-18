@@ -12,6 +12,7 @@ import {
   runRoundtable
 } from "./runtime/simulatedRuntime.mjs";
 import { OpenAIAdapter } from "./runtime/openaiAdapter.mjs";
+import { evaluatePolicyRequest } from "./policyGateway.mjs";
 
 const config = loadConfig();
 const store = new JsonStore(config);
@@ -141,6 +142,40 @@ async function route(req, res) {
       return sendJson(res, 200, { agents }, headers);
     }
 
+    const shareMatch = pathname.match(/^\/api\/agents\/([^/]+)\/share$/);
+    if (shareMatch && req.method === "POST") {
+      const body = await readJson(req);
+      const agent = store.get("agents", "agent_id", shareMatch[1]);
+      if (!agent) return sendJson(res, 404, { error: "agent_not_found" }, headers);
+      if (agent.agent_class === "system_public") {
+        const error = new Error("System public agents are already shared.");
+        error.status = 409;
+        throw error;
+      }
+
+      const shareRecord = store.insert("share_records", {
+        share_record_id: store.newId("share"),
+        agent_id: agent.agent_id,
+        requested_by: body.requestedBy || agent.owner_user_id || "local-user",
+        from_visibility_scope: agent.visibility_scope,
+        to_visibility_scope: "all_users",
+        review_status: "recorded_for_mvp",
+        sensitive_data_warning_acknowledged: Boolean(body.sensitiveDataWarningAcknowledged),
+        notes: body.notes || "",
+        created_at: new Date().toISOString()
+      });
+
+      const updatedAgent = store.update("agents", "agent_id", agent.agent_id, {
+        agent_class: "shared_public",
+        visibility_scope: "all_users",
+        publish_status: "shared_recorded",
+        share_state: "shared",
+        default_pool_eligible: agent.trust_status === "official_verified"
+      });
+
+      return sendJson(res, 200, { agent: updatedAgent, shareRecord }, headers);
+    }
+
     if (pathname === "/api/agents/request" && req.method === "POST") {
       const body = await readJson(req);
       const requestText = requireText(body.requestText, "requestText");
@@ -157,6 +192,13 @@ async function route(req, res) {
         targetOutput: body.targetOutput || "评审报告"
       }, store);
       return sendJson(res, 201, { taskProfile }, headers);
+    }
+
+    if (pathname === "/api/policy/evaluate" && req.method === "POST") {
+      const body = await readJson(req);
+      const policyDecision = evaluatePolicyRequest(body);
+      store.insert("policy_decisions", policyDecision);
+      return sendJson(res, 200, { policyDecision }, headers);
     }
 
     if (pathname === "/api/sessions" && req.method === "GET") {

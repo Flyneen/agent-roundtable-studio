@@ -83,10 +83,29 @@ function renderAgents(agents = state.agents) {
         <span class="tag">${escapeHtml(agent.agent_class)}</span>
         <span class="tag">${escapeHtml(agent.trust_status)}</span>
         <span class="tag">${escapeHtml(agent.visibility_scope)}</span>
+        <span class="tag">${escapeHtml(agent.publish_status || "draft")}</span>
       </div>
       <p><strong>能力：</strong>${agent.capabilities.map(escapeHtml).join("、")}</p>
+      ${agent.agent_class === "personal_private" ? `<button class="ghost-button mini" data-share-agent="${escapeHtml(agent.agent_id)}">记录为共享 Agent</button>` : ""}
     </article>
   `).join("");
+  $$("[data-share-agent]").forEach((button) => {
+    button.addEventListener("click", async () => {
+      try {
+        const data = await api(`/api/agents/${button.dataset.shareAgent}/share`, {
+          method: "POST",
+          body: JSON.stringify({
+            sensitiveDataWarningAcknowledged: true,
+            notes: "MVP-0 记录共享状态，后续部门版再加入审核。"
+          })
+        });
+        toast(`已记录共享：${data.agent.display_name}`);
+        await loadAgents();
+      } catch (error) {
+        toast(error.message);
+      }
+    });
+  });
 }
 
 function renderRoundtable(events) {
@@ -125,9 +144,19 @@ async function loadSettings() {
     const settings = await api("/api/settings");
     $("#runtimeLabel").textContent = `Runtime: ${settings.aiRuntime}`;
     $("#apiBaseLabel").textContent = API_BASE;
+    const policy = await api("/api/policy/evaluate", {
+      method: "POST",
+      body: JSON.stringify({
+        resource_type: "tool",
+        action: "roundtable_runtime",
+        actor_type: "system"
+      })
+    });
+    $("#policyLabel").textContent = `Policy: ${policy.policyDecision.result}`;
   } catch (error) {
     $("#runtimeLabel").textContent = "后端未连接";
     $("#apiBaseLabel").textContent = API_BASE;
+    $("#policyLabel").textContent = "Policy: unavailable";
   }
 }
 

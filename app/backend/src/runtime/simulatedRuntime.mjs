@@ -165,6 +165,10 @@ export function createPersonalAgentDraft(requestText, agents, store) {
 }
 
 export function runRoundtable(session, store) {
+  if (session.problem.includes("[partial]") || session.problem.includes("模拟失败")) {
+    return runPartialRoundtable(session, store);
+  }
+
   const agents = session.agent_panel.map((item) => store.get("agents", "agent_id", item.agent_id)).filter(Boolean);
   const taskProfile = session.task_profile;
   const events = [];
@@ -250,6 +254,49 @@ export function runRoundtable(session, store) {
     session: updatedSession,
     events: savedEvents,
     artifact
+  };
+}
+
+function runPartialRoundtable(session, store) {
+  const agents = session.agent_panel.map((item) => store.get("agents", "agent_id", item.agent_id)).filter(Boolean);
+  const actor = agents[0] || {
+    agent_id: "system",
+    display_name: "System",
+    current_version_id: "system:v1"
+  };
+  const partialEvent = makeEvent(store, session, actor, "partial_failure", {
+    failure_type: "simulated_runtime_failure",
+    failed_stage: "challenges",
+    reason: "样例任务触发 partial 验收路径，系统保留已生成事件并标记为 partial。",
+    recoverable: true,
+    next_action: "用户可调整问题或稍后重试。"
+  });
+  const savedEvents = [store.insert("trace_events", partialEvent)];
+  const artifact = {
+    artifact_id: store.newId("art"),
+    session_id: session.session_id,
+    artifact_type: "partial_markdown_report",
+    title: "圆桌未完整完成",
+    markdown: `# 圆桌未完整完成\n\n本次运行在质疑阶段中断，状态已标记为 partial。\n\n## 已保留事件\n\n- ${partialEvent.event_id}：${partialEvent.payload.reason}\n\n## 下一步\n\n请保留当前 trace 后重试，或降低任务复杂度后重新发起。`,
+    trace_event_ids: savedEvents.map((event) => event.event_id),
+    created_at: new Date().toISOString()
+  };
+  store.insert("artifacts", artifact);
+
+  const updatedSession = store.update("sessions", "session_id", session.session_id, {
+    status: "partial",
+    current_stage: "partial_failure",
+    failure_reason: partialEvent.payload.reason,
+    trace_event_ids: savedEvents.map((event) => event.event_id),
+    artifact_ids: [artifact.artifact_id],
+    completed_at: null
+  });
+
+  return {
+    session: updatedSession,
+    events: savedEvents,
+    artifact,
+    partial: true
   };
 }
 

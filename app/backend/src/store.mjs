@@ -2,12 +2,14 @@ import fs from "node:fs";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
 import { createAgentVersion, seedAgents } from "./seedAgents.mjs";
+import { CURRENT_SCHEMA_VERSION, migrateStore } from "./migrations.mjs";
 
 function emptyStore() {
   return {
     meta: {
-      schema_version: 1,
-      created_at: new Date().toISOString()
+      schema_version: CURRENT_SCHEMA_VERSION,
+      created_at: new Date().toISOString(),
+      migrations_applied: []
     },
     agents: [],
     agent_versions: [],
@@ -16,7 +18,8 @@ function emptyStore() {
     trace_events: [],
     evidence_items: [],
     artifacts: [],
-    share_records: []
+    share_records: [],
+    policy_decisions: []
   };
 }
 
@@ -32,6 +35,7 @@ export class JsonStore {
 
     if (!fs.existsSync(this.file)) {
       this.data = emptyStore();
+      this.data = migrateStore(this.data);
       this.seed();
       this.save();
       return;
@@ -39,10 +43,11 @@ export class JsonStore {
 
     this.data = JSON.parse(fs.readFileSync(this.file, "utf8"));
     this.ensureShape();
+    this.data = migrateStore(this.data);
     if (this.data.agents.length === 0) {
       this.seed();
-      this.save();
     }
+    this.save();
   }
 
   ensureShape() {
@@ -52,6 +57,8 @@ export class JsonStore {
         this.data[key] = blank[key];
       }
     }
+    this.data.meta ||= blank.meta;
+    this.data.meta.migrations_applied ||= [];
   }
 
   seed() {

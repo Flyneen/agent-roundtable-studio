@@ -265,6 +265,12 @@ textarea:focus {
   color: var(--forest);
 }
 
+.mini {
+  padding: 8px 12px;
+  margin-top: 12px;
+  font-size: 13px;
+}
+
 .agent-grid,
 .agent-list,
 .event-list {
