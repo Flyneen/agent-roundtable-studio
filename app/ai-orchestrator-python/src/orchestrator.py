@@ -322,6 +322,7 @@ class OpenAIClient:
                     {"role": "user", "content": json.dumps(payload, ensure_ascii=False)},
                 ],
                 "temperature": temperature,
+                "max_tokens": max_tokens_for_schema(schema_name),
                 "response_format": {"type": "json_object"},
             }, f"{self.config['openai_base_url']}/chat/completions"
 
@@ -374,6 +375,19 @@ def parse_json_object(text):
             return json.loads(match.group(0))
         except json.JSONDecodeError:
             return None
+
+
+def max_tokens_for_schema(schema_name):
+    limits = {
+        "task_profile_agent": 900,
+        "agent_selector_agent": 900,
+        "agent_position_event": 500,
+        "critic_agent": 420,
+        "agent_response_revision": 500,
+        "consensus_synthesizer": 700,
+        "report_synthesizer": 1600,
+    }
+    return limits.get(schema_name, 800)
 
 
 def runtime_mode():
@@ -551,9 +565,11 @@ def recommend_agents(profile, store, client):
         missing = merge_list(missing, model_output["missing_perspectives"])
 
     generated = [ensure_personal_agent(perspective, profile, store) for perspective in missing]
-    final_panel = [item["agent"] for item in selected] + generated
-    recommended = [recommendation_entry(agent, profile, "matched_existing") for agent in [item["agent"] for item in selected]]
-    recommended += [recommendation_entry(agent, profile, "auto_generated_personal") for agent in generated]
+    selected_agents = cap_panel_agents([item["agent"] for item in selected], profile)
+    generated_agents = generated[: max(0, 6 - len(selected_agents))]
+    final_panel = selected_agents + generated_agents
+    recommended = [recommendation_entry(agent, profile, "matched_existing") for agent in selected_agents]
+    recommended += [recommendation_entry(agent, profile, "auto_generated_personal") for agent in generated_agents]
 
     excluded = build_excluded(scored, selected_ids, excluded_notes)
     coverage = [
@@ -592,7 +608,7 @@ def recommend_agents(profile, store, client):
                 "trust_status": agent["trust_status"],
                 "reason": agent["summary"],
             }
-            for agent in generated
+            for agent in generated_agents
         ],
         "ai_review": {
             "status": call_evidence["status"],
@@ -617,6 +633,24 @@ def trace_step(stage, title, detail, evidence=None, duration_ms=None, status=Non
         "duration_ms": duration_ms if duration_ms is not None else evidence.get("latency_ms", 0) if evidence else 0,
         "created_at": now_iso(),
     }
+
+
+def cap_panel_agents(agents, profile, limit=6):
+    if len(agents) <= limit:
+        return agents
+    picked = []
+    for perspective in profile.get("required_perspectives", []):
+        match = next((agent for agent in agents if agent not in picked and covers(agent, perspective)), None)
+        if match:
+            picked.append(match)
+        if len(picked) >= limit:
+            return picked
+    for agent in agents:
+        if agent not in picked:
+            picked.append(agent)
+        if len(picked) >= limit:
+            break
+    return picked
 
 
 def candidate_summary(agent, score):
@@ -849,12 +883,13 @@ def run_roundtable(session, store, client):
 
     agents = [store.get("agents", "agent_id", item["agent_id"]) for item in session.get("agent_panel", [])]
     agents = [agent for agent in agents if agent]
+    agents = agents[:6]
     events = []
 
     positions = [make_position(agent, session, client) for agent in agents]
     events.extend(positions)
 
-    challenge_targets = positions[: min(4, len(positions))]
+    challenge_targets = positions[: min(3, len(positions))]
     challenges = []
     for index, target in enumerate(challenge_targets):
         challenger = agents[(index + 1) % len(agents)] if agents else None
