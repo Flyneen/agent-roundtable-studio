@@ -1,0 +1,27 @@
+services:
+  agent-roundtable-studio:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    image: agent-roundtable-studio:latest
+    container_name: agent-roundtable-studio
+    restart: unless-stopped
+    env_file:
+      - /opt/agent-roundtable-studio/env/backend.env
+    environment:
+      APP_ENV: production
+      BACKEND_HOST: 0.0.0.0
+      BACKEND_PORT: 8787
+      APP_BASE_PATH: /agent-roundtable-studio
+      DATA_DIR: /data
+    volumes:
+      - /opt/agent-roundtable-studio/data:/data
+    expose:
+      - "8787"
+    networks:
+      - gateway
+
+networks:
+  gateway:
+    name: 1panel-network
+    external: true

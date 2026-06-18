@@ -12,6 +12,7 @@ const child = spawn(process.execPath, ["backend/src/server.mjs"], {
   env: {
     ...process.env,
     BACKEND_PORT: String(port),
+    APP_BASE_PATH: "/agent-roundtable-studio",
     DATA_DIR: "./backend/data-test",
     AI_RUNTIME: "simulated"
   },
@@ -86,6 +87,19 @@ async function main() {
 
   const health = await get("/health");
   if (!health.ok) throw new Error("Health check failed");
+
+  const appShell = await fetch(`http://127.0.0.1:${port}/`);
+  if (!appShell.ok || !(await appShell.text()).includes("Agent Roundtable")) {
+    throw new Error("Static app shell is not served from root");
+  }
+
+  const prefixedHealth = await fetch(`http://127.0.0.1:${port}/agent-roundtable-studio/health`);
+  if (!prefixedHealth.ok) throw new Error("Prefixed health check failed");
+
+  const prefixedAppShell = await fetch(`http://127.0.0.1:${port}/agent-roundtable-studio/`);
+  if (!prefixedAppShell.ok || !(await prefixedAppShell.text()).includes("Agent Roundtable")) {
+    throw new Error("Static app shell is not served from app base path");
+  }
 
   const samples = [
     {

@@ -91,7 +91,7 @@
 - [x] 11.5 Build and upload frontend assets.
 - [x] 11.6 Deploy backend service with process manager or systemd.
 - [x] 11.7 Configure Nginx to serve frontend and reverse proxy `/api` to backend.
-- [ ] 11.8 Configure HTTPS certificate.
+- [x] 11.8 Configure HTTPS certificate.
 - [x] 11.9 Configure environment variables for production without writing secrets into source control.
 - [x] 11.10 Verify public access through the server IP or domain.
 
@@ -101,4 +101,4 @@
 - [x] 12.2 Run OpenSpec validation for all specs and changes.
 - [x] 12.3 Run browser smoke test against deployed Web app.
 - [x] 12.4 Confirm no secrets are committed or written into specs.
-- [ ] 12.5 Archive the OpenSpec change after implementation is complete and verified.
+- [x] 12.5 Archive the OpenSpec change after implementation is complete and verified.

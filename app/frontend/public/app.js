@@ -1,4 +1,5 @@
-const API_BASE = localStorage.getItem("ars_api_base") || "http://127.0.0.1:8787";
+const APP_BASE_PATH = inferAppBasePath();
+const API_BASE = localStorage.getItem("ars_api_base") || inferApiBase();
 
 const state = {
   currentSession: null,
@@ -36,6 +37,20 @@ async function api(path, options = {}) {
     throw new Error(message);
   }
   return response.json();
+}
+
+function inferAppBasePath() {
+  const marker = "/agent-roundtable-studio";
+  return window.location.pathname.startsWith(marker) ? marker : "";
+}
+
+function inferApiBase() {
+  const isLocalDev = ["127.0.0.1", "localhost"].includes(window.location.hostname)
+    && ["5173", "5174", ""].includes(window.location.port);
+  if (isLocalDev && !APP_BASE_PATH) {
+    return "http://127.0.0.1:8787";
+  }
+  return `${window.location.origin}${APP_BASE_PATH}`;
 }
 
 function setView(viewId) {

@@ -1,4 +1,5 @@
 import http from "node:http";
+import fs from "node:fs/promises";
 import { URL } from "node:url";
 import { randomUUID } from "node:crypto";
 import { fileURLToPath } from "node:url";
@@ -18,6 +19,20 @@ const config = loadConfig();
 const store = new JsonStore(config);
 store.init();
 const openai = new OpenAIAdapter(config);
+const appRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
+const staticRoot = path.join(appRoot, "frontend", "dist");
+const contentTypes = {
+  ".html": "text/html; charset=utf-8",
+  ".css": "text/css; charset=utf-8",
+  ".js": "text/javascript; charset=utf-8",
+  ".json": "application/json; charset=utf-8",
+  ".svg": "image/svg+xml; charset=utf-8",
+  ".ico": "image/x-icon",
+  ".png": "image/png",
+  ".jpg": "image/jpeg",
+  ".jpeg": "image/jpeg",
+  ".webp": "image/webp"
+};
 
 function sendJson(res, status, payload, headers = {}) {
   res.writeHead(status, {
@@ -33,6 +48,24 @@ function sendText(res, status, text, headers = {}) {
     ...headers
   });
   res.end(text);
+}
+
+async function sendFile(res, filePath, headers = {}) {
+  const data = await fs.readFile(filePath);
+  res.writeHead(200, {
+    "Content-Type": contentTypes[path.extname(filePath)] || "application/octet-stream",
+    ...headers
+  });
+  res.end(data);
+}
+
+function stripBasePath(pathname) {
+  if (!config.appBasePath) return pathname;
+  if (pathname === config.appBasePath) return "/";
+  if (pathname.startsWith(`${config.appBasePath}/`)) {
+    return pathname.slice(config.appBasePath.length) || "/";
+  }
+  return pathname;
 }
 
 function corsHeaders(req) {
@@ -113,7 +146,7 @@ async function route(req, res) {
   }
 
   const url = new URL(req.url || "/", `http://${req.headers.host}`);
-  const pathname = url.pathname;
+  const pathname = stripBasePath(url.pathname);
 
   try {
     if (req.method === "GET" && pathname === "/health") {
@@ -253,6 +286,14 @@ async function route(req, res) {
       });
     }
 
+    if (pathname === "/api" || pathname.startsWith("/api/")) {
+      return sendText(res, 404, "Not found", headers);
+    }
+
+    if (req.method === "GET" || req.method === "HEAD") {
+      return serveStatic(req, res, pathname, headers);
+    }
+
     return sendText(res, 404, "Not found", headers);
   } catch (error) {
     const status = error.status || 500;
@@ -268,6 +309,36 @@ async function route(req, res) {
       message: error.message,
       requestId
     }, headers);
+  }
+}
+
+async function serveStatic(req, res, pathname, headers) {
+  const safePath = path.normalize(decodeURIComponent(pathname)).replace(/^(\.\.[/\\])+/, "");
+  let filePath = path.join(staticRoot, safePath);
+
+  if (pathname === "/" || !path.extname(filePath)) {
+    filePath = path.join(staticRoot, "index.html");
+  }
+
+  const resolved = path.resolve(filePath);
+  const relative = path.relative(staticRoot, resolved);
+  if (relative.startsWith("..") || path.isAbsolute(relative)) {
+    return sendText(res, 403, "Forbidden", headers);
+  }
+
+  try {
+    await fs.access(resolved);
+    if (req.method === "HEAD") {
+      res.writeHead(200, {
+        "Content-Type": contentTypes[path.extname(resolved)] || "application/octet-stream",
+        ...headers
+      });
+      res.end();
+      return;
+    }
+    return await sendFile(res, resolved, headers);
+  } catch {
+    return sendText(res, 404, "Not found", headers);
   }
 }
 

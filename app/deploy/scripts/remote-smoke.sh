@@ -3,9 +3,14 @@ set -euo pipefail
 
 BASE_URL="${BASE_URL:-http://127.0.0.1}"
 export BASE_URL
+CURL_TLS_ARGS=()
+if [[ "${BASE_URL}" == https://* ]]; then
+  CURL_TLS_ARGS=(-k)
+  export NODE_TLS_REJECT_UNAUTHORIZED=0
+fi
 
-curl --noproxy "*" -fsS "${BASE_URL}/health" >/tmp/ars-health.json
-curl --noproxy "*" -fsS "${BASE_URL}/" >/tmp/ars-index.html
+curl --noproxy "*" "${CURL_TLS_ARGS[@]}" -fsS "${BASE_URL}/health" >/tmp/ars-health.json
+curl --noproxy "*" "${CURL_TLS_ARGS[@]}" -fsS "${BASE_URL}/" >/tmp/ars-index.html
 
 if ! grep -q "Agent Roundtable" /tmp/ars-index.html; then
   echo "Frontend smoke check failed: app shell not found." >&2

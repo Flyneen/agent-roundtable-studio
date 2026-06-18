@@ -4,6 +4,12 @@ import { fileURLToPath } from "node:url";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const appRoot = path.resolve(__dirname, "..", "..");
 
+function normalizeBasePath(value) {
+  if (!value || value === "/") return "";
+  const withLeadingSlash = value.startsWith("/") ? value : `/${value}`;
+  return withLeadingSlash.replace(/\/+$/, "");
+}
+
 export function loadConfig(overrides = {}) {
   const env = { ...process.env, ...overrides };
   const dataDir = path.resolve(appRoot, env.DATA_DIR || "./backend/data");
@@ -12,6 +18,7 @@ export function loadConfig(overrides = {}) {
     appEnv: env.APP_ENV || "development",
     host: env.BACKEND_HOST || "127.0.0.1",
     port: Number(env.BACKEND_PORT || 8787),
+    appBasePath: normalizeBasePath(env.APP_BASE_PATH || ""),
     dataDir,
     storeFile: path.join(dataDir, "store.json"),
     aiRuntime: env.AI_RUNTIME || "simulated",

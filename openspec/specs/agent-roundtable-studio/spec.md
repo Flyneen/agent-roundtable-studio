@@ -14,9 +14,7 @@ Agent Roundtable Studio 是面向复杂问题的结构化审议工作台。系�
 - `06-mvp0-acceptance-criteria.md`
 - `07-agent-request-and-sharing-flow.md`
 - `08-cloud-ai-runtime-decision.md`
-
 ## Requirements
-
 ### Requirement: Product Identity
 
 The system SHALL be a structured problem-review workspace, not a multi-agent chatroom.
@@ -207,3 +205,43 @@ The cloud product runtime SHALL use OpenAI API for model execution and SHALL NOT
 
 - **WHEN** an agent requests file, network, database, or tool access
 - **THEN** the request goes through the product's policy gateway, tool gateway, and evidence gateway rather than direct model access
+
+### Requirement: First Web Release Scope
+The system SHALL deliver the first release as a Web application with separated frontend and backend components.
+
+#### Scenario: Release scope is evaluated
+- **WHEN** the first release is evaluated
+- **THEN** browser-based access, frontend/backend separation, backend API, structured roundtable orchestration, and deployability are required
+
+#### Scenario: Non-Web platform is requested
+- **WHEN** desktop or mobile app support is requested during the first release
+- **THEN** it is recorded as a future option and does not block the Web MVP
+
+### Requirement: Containerized Huawei Cloud Deployment
+The system SHALL deploy the first Web release as a containerized service behind the existing `8181` gateway.
+
+#### Scenario: Application is deployed on Huawei Cloud
+- **WHEN** the first Web release is deployed
+- **THEN** the application runs as a Docker container that serves the frontend static files, backend API, and health endpoint from one internal service
+- **AND** the container persists data through a mounted server-side volume
+
+#### Scenario: Existing gateway is reused
+- **WHEN** public access is configured
+- **THEN** the existing `gateway-nginx-8181` routes `/agent-roundtable-studio/` to the application container
+- **AND** the deployment does not require a new public port whitelist
+
+#### Scenario: Application container is isolated
+- **WHEN** the service is running
+- **THEN** the application container is reachable by the gateway over the internal Docker network
+- **AND** the application container does not expose backend ports directly to the public internet
+
+### Requirement: Codex Development Role
+The system SHALL treat Codex as a development tool rather than product runtime.
+
+#### Scenario: Development work is performed
+- **WHEN** code needs to be generated, reviewed, tested, or deployed
+- **THEN** Codex can be used as the engineering assistant
+
+#### Scenario: User roundtable is executed
+- **WHEN** an end user starts a roundtable in the Web application
+- **THEN** the system uses the backend runtime and OpenAI API adapter rather than Codex as the serving runtime

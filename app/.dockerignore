@@ -1,0 +1,17 @@
+node_modules
+backend/data
+backend/data-test
+frontend/dist
+data
+logs
+.env
+.env.*
+*.log
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+*.tar
+*.tar.gz
+*.zip

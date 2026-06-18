@@ -2,131 +2,162 @@
 
 > 不要在任何配置文件、脚本或仓库中写入服务器密码、OpenAI API Key 或其他密钥。
 
-## 1. 服务器安全基线
+## 1. 部署结论
+
+首期 Web 版本采用容器化部署：
+
+- 应用服务：单个 `agent-roundtable-studio` 容器，同时提供前端静态页面、`/api/*` 和 `/health`。
+- 持久化数据：挂载到 `/opt/agent-roundtable-studio/data`，容器内路径为 `/data`。
+- 公网入口：复用已有 `gateway-nginx-8181`，路径为 `/agent-roundtable-studio/`。
+- 端口策略：不新增公网白名单端口，应用容器不直接映射公网端口。
+
+访问地址：
+
+```text
+http://113.44.223.11:8181/agent-roundtable-studio/
+```
+
+## 2. 服务器安全基线
 
 1. 更换已暴露的 root 密码。
 2. 创建部署用户，例如 `arsdeploy`。
 3. 为部署用户配置 SSH Key。
 4. 禁用或限制 root 密码登录。
-5. 华为云安全组仅开放：
-   - `22/tcp`：SSH，仅允许可信 IP 更好。
-   - `80/tcp`：HTTP。
-   - `443/tcp`：HTTPS。
-6. 后端服务只监听 `127.0.0.1:8787`，不要直接暴露到公网。
+5. 华为云安全组仅开放必要端口：
+   - `22/tcp`：SSH，建议仅允许可信 IP。
+   - `8181/tcp`：统一网关入口。
+6. 应用容器只加入内部 Docker 网络，不直接暴露公网端口。
 
-## 2. 目录建议
+## 3. 目录结构
 
 ```text
 /opt/agent-roundtable-studio
-  app/
-    backend/
-    frontend/dist/
-    deploy/
+  repo/
+    app/
+      backend/
+      frontend/
+      deploy/
   data/
-  logs/
   env/
 ```
 
-## 3. 后端环境变量
+## 4. 环境变量
+
+服务器环境文件：
+
+```text
+/opt/agent-roundtable-studio/env/backend.env
+```
 
 示例：
 
 ```text
 APP_ENV=production
-BACKEND_HOST=127.0.0.1
+BACKEND_HOST=0.0.0.0
 BACKEND_PORT=8787
-DATA_DIR=/opt/agent-roundtable-studio/data
+APP_BASE_PATH=/agent-roundtable-studio
+DATA_DIR=/data
 AI_RUNTIME=simulated
 OPENAI_API_KEY=
-OPENAI_MODEL=
-ALLOWED_ORIGINS=https://your-domain.example
+OPENAI_MODEL=gpt-4.1-mini
+OPENAI_TIMEOUT_MS=30000
+OPENAI_MAX_RETRIES=2
+ALLOWED_ORIGINS=http://127.0.0.1:5173,http://localhost:5173,http://113.44.223.11:8181,https://113.44.223.11:8181
 ```
 
-真实 `OPENAI_API_KEY` 只能存在服务器环境或 secret 文件中。
+真实 `OPENAI_API_KEY` 只能存在服务器环境或 secret 文件中，不能提交到 GitHub。
 
-## 4. Nginx 反向代理
+## 5. Docker Compose
+
+Compose 文件位于：
+
+```text
+app/deploy/docker-compose.yml
+```
+
+部署后会创建容器：
+
+```text
+agent-roundtable-studio
+```
+
+容器加入外部网络：
+
+```text
+1panel-network
+```
+
+如果 `gateway-nginx-8181` 不在该网络中，部署脚本会把网关容器连接到该网络，使 Nginx 可以通过容器名访问：
+
+```text
+http://agent-roundtable-studio:8787
+```
+
+## 6. 8181 网关分发
+
+网关片段位于：
+
+```text
+app/deploy/gateway-8181-agent-roundtable-snippet.conf
+```
+
+需要放入 `gateway-nginx-8181` 的 HTTP 和 HTTPS server block 中：
 
 ```nginx
-server {
-    listen 18080;
-    server_name _;
+location = /agent-roundtable-studio {
+    return 301 /agent-roundtable-studio/;
+}
 
-    root /opt/agent-roundtable-studio/app/frontend/dist;
-    index index.html;
+location = /agent-roundtable-studio/health {
+    proxy_pass http://agent-roundtable-studio:8787/health;
+}
 
-    location / {
-        try_files $uri /index.html;
-    }
+location /agent-roundtable-studio/api/ {
+    proxy_pass http://agent-roundtable-studio:8787/api/;
+}
 
-    location /api/ {
-        proxy_pass http://127.0.0.1:8787/api/;
-        proxy_http_version 1.1;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
-
-    location /health {
-        proxy_pass http://127.0.0.1:8787/health;
-    }
+location /agent-roundtable-studio/ {
+    proxy_pass http://agent-roundtable-studio:8787/;
 }
 ```
 
-## 5. systemd 服务示例
+完整片段包含必要的 `X-Forwarded-*` 头和 `proxy_redirect off`，以文件内容为准。
 
-```ini
-[Unit]
-Description=Agent Roundtable Studio Backend
-After=network.target
+## 7. 自动化部署
 
-[Service]
-Type=simple
-User=arsdeploy
-WorkingDirectory=/opt/agent-roundtable-studio/app
-EnvironmentFile=/opt/agent-roundtable-studio/env/backend.env
-ExecStart=/usr/bin/node backend/src/server.mjs
-Restart=always
-RestartSec=5
+仓库提供以下脚本：
 
-[Install]
-WantedBy=multi-user.target
-```
-
-## 6. 发布检查
-
-- `npm test`
-- `npm run build`
-- `openspec validate web-mvp-frontend-backend --strict --no-interactive`
-- 浏览器访问前端。
-- 检查 `/health`。
-- 完成一次问题输入到报告生成的端到端流程。
-
-## 7. 自动化部署脚本
-
-仓库提供以下脚本，均不包含真实密码或密钥：
-
-- `deploy/scripts/prepare-server.sh`：初始化服务器运行环境、创建部署用户、安装 Node.js、Git、Nginx。
-- `deploy/scripts/deploy-from-github.sh`：从 GitHub 拉取代码、执行测试和构建、安装 systemd 与 Nginx 配置、重启服务。
+- `deploy/scripts/deploy-container.sh`：从 GitHub 拉取代码、构建镜像、运行容器、检查容器健康、reload 8181 网关。
+- `deploy/scripts/deploy-from-github.sh`：兼容入口，当前会转到容器化部署脚本。
 - `deploy/scripts/remote-smoke.sh`：对已部署站点执行线上烟测。
 
-当前服务器 `80/tcp` 已被既有 Docker Nginx 占用，为避免影响已有业务，首期独立监听 `18080/tcp`。如果后续要接入标准 HTTP/HTTPS，应在既有 80/443 网关中增加独立域名或路径转发，而不是直接停掉现有容器。
-
-首次部署建议流程：
+首次部署：
 
 ```bash
 cd /tmp
 git clone https://github.com/Flyneen/agent-roundtable-studio.git
 cd agent-roundtable-studio/app
-bash deploy/scripts/prepare-server.sh
-bash deploy/scripts/deploy-from-github.sh
-BASE_URL=http://113.44.223.11:18080 bash deploy/scripts/remote-smoke.sh
+bash deploy/scripts/deploy-container.sh
+BASE_URL=http://113.44.223.11:8181/agent-roundtable-studio bash deploy/scripts/remote-smoke.sh
 ```
 
-如果未来切换真实模型，在服务器上编辑：
+后续更新：
 
 ```bash
-/opt/agent-roundtable-studio/env/backend.env
+cd /opt/agent-roundtable-studio/repo/app
+git pull --ff-only origin main
+bash deploy/scripts/deploy-container.sh
+BASE_URL=http://113.44.223.11:8181/agent-roundtable-studio bash deploy/scripts/remote-smoke.sh
 ```
 
-只在服务器环境文件中填写 `OPENAI_API_KEY`，不要提交到 GitHub。
+## 8. 发布检查
+
+- `docker ps` 中存在 `agent-roundtable-studio`，状态为 running。
+- `docker exec agent-roundtable-studio node --input-type=module -e "const r = await fetch('http://127.0.0.1:8787/health'); if (!r.ok) process.exit(1);"` 通过。
+- `docker exec gateway-nginx-8181 nginx -t` 通过。
+- `BASE_URL=http://113.44.223.11:8181/agent-roundtable-studio bash deploy/scripts/remote-smoke.sh` 通过。
+- `http://113.44.223.11:8181/` 原有服务仍可访问，不能被本应用覆盖。
+
+## 9. 旧部署方式
+
+旧的宿主机 systemd + 宿主机 Nginx `18080/443` 方式仅保留为历史参考，不再作为首期推荐上线方式。当前上线以 Docker Compose + `8181` 网关为准。

@@ -7,7 +7,7 @@
     "start:backend": "node backend/src/server.mjs",
     "start:frontend": "node frontend/server.mjs",
     "build": "node frontend/scripts/build.mjs",
-    "test": "node backend/test/smoke.mjs",
+    "test": "npm run build && node backend/test/smoke.mjs",
     "validate:openspec": "openspec validate web-mvp-frontend-backend --strict --no-interactive"
   },
   "engines": {
