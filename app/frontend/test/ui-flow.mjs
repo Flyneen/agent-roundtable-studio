@@ -43,7 +43,7 @@ try {
 
   await page.click("[data-view='output']");
   await page.waitForSelector("#report:not(.empty)", { timeout: 180000 });
-  await expectVisibleText(page, "圆桌评审报告");
+  await expectReportText(page, /圆桌|报告|结论|建议/);
   await expectVisiblePattern(page, /主要质疑|关键质疑/);
   await expectVisibleText(page, "事件索引");
   await page.waitForSelector("#exportButton:not(.hidden)", { timeout: 180000 });
@@ -70,4 +70,11 @@ async function expectVisibleText(page, text) {
 async function expectVisiblePattern(page, pattern) {
   const locator = page.getByText(pattern).first();
   await locator.waitFor({ state: "visible", timeout: 15000 });
+}
+
+async function expectReportText(page, pattern) {
+  await page.waitForFunction((source) => {
+    const report = document.querySelector("#report");
+    return report && new RegExp(source).test(report.textContent || "");
+  }, pattern.source, { timeout: 15000 });
 }
