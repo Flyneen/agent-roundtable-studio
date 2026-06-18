@@ -53,12 +53,26 @@ set_env_value() {
   fi
 }
 
+sanitize_env_file() {
+  local tmp
+  tmp="$(mktemp)"
+  awk '
+    /^[[:space:]]*$/ { next }
+    /^[[:space:]]*#/ { print; next }
+    /^[A-Za-z_][A-Za-z0-9_]*=/ { print; next }
+  ' "${ENV_FILE}" > "${tmp}"
+  cat "${tmp}" > "${ENV_FILE}"
+  rm -f "${tmp}"
+}
+
 read_key() {
   local key="${OPENAI_API_KEY:-}"
   if [[ -z "${key}" ]]; then
     read -r -s -p "Enter new OpenAI-compatible API key: " key
     echo
   fi
+  key="${key//$'\r'/}"
+  key="${key//$'\n'/}"
   if [[ -z "${key}" ]]; then
     echo "OPENAI_API_KEY is required." >&2
     exit 1
@@ -71,6 +85,7 @@ mkdir -p "$(dirname "${ENV_FILE}")"
 touch "${ENV_FILE}"
 chmod 600 "${ENV_FILE}"
 cp "${ENV_FILE}" "${ENV_FILE}.bak.$(date +%Y%m%d%H%M%S)"
+sanitize_env_file
 
 api_key="$(read_key)"
 set_env_value "AI_RUNTIME" "openai"
